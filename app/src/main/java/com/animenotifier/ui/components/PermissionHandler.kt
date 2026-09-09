@@ -15,17 +15,16 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Alarm
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.animenotifier.ui.theme.BorderSubtle
-import com.animenotifier.ui.theme.NeonCoral
+import com.animenotifier.ui.theme.*
 
 @Composable
 fun PermissionHandler() {
@@ -45,7 +44,7 @@ fun PermissionHandler() {
 fun ExactAlarmPermissionBanner() {
     val context = LocalContext.current
     val alarmManager = remember { context.getSystemService(Context.ALARM_SERVICE) as AlarmManager }
-    var hasPermission by remember {
+    val hasPermission by remember {
         mutableStateOf(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 alarmManager.canScheduleExactAlarms()
@@ -60,10 +59,10 @@ fun ExactAlarmPermissionBanner() {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(NeonCoral.copy(alpha = 0.12f))
-                .border(1.dp, NeonCoral.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
-                .padding(14.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(SurfaceElevated)
+                .border(1.dp, SurfaceBorder, RoundedCornerShape(8.dp))
+                .padding(12.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -72,20 +71,21 @@ fun ExactAlarmPermissionBanner() {
                 Icon(
                     imageVector = Icons.Default.Alarm,
                     contentDescription = null,
-                    tint = NeonCoral,
-                    modifier = Modifier.size(24.dp)
+                    tint = AccentPrimary,
+                    modifier = Modifier.size(20.dp)
                 )
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Exact Alarms Disabled",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = NeonCoral
+                        text = "EXACT ALARMS DISABLED",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp,
+                        color = TextPrimary
                     )
                     Text(
-                        text = "Grant exact alarm permission for precise release notifications.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 12.sp
+                        text = "Enable in system settings for precise release notifications.",
+                        fontSize = 11.sp,
+                        color = TextSecondary
                     )
                 }
                 Button(
@@ -95,11 +95,17 @@ fun ExactAlarmPermissionBanner() {
                         }
                         context.startActivity(intent)
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = NeonCoral),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                    shape = RoundedCornerShape(12.dp)
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentPrimary),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                    shape = RoundedCornerShape(4.dp)
                 ) {
-                    Text("Grant", color = MaterialTheme.colorScheme.onPrimary, fontSize = 12.sp)
+                    Text(
+                        text = "ENABLE",
+                        color = TextPrimary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    )
                 }
             }
         }

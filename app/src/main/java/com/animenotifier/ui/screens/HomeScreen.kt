@@ -21,8 +21,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -33,6 +35,9 @@ import com.animenotifier.ui.AnimeViewModel
 import com.animenotifier.ui.components.ExactAlarmPermissionBanner
 import com.animenotifier.ui.theme.*
 import kotlinx.coroutines.delay
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,6 +46,7 @@ fun HomeScreen(
     onNavigateToSearch: () -> Unit
 ) {
     val watchlist by viewModel.savedAnimeList.collectAsState()
+    val heroAnime by viewModel.nextAiringHero.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
 
     var showSettingsForAnime by remember { mutableStateOf<AnimeEntity?>(null) }
@@ -49,51 +55,30 @@ fun HomeScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(
-                                    Brush.linearGradient(
-                                        listOf(ElectricIndigo, NeonCoral)
-                                    )
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PlayArrow,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        Text(
-                            text = "AnimeNotifier",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                    }
+                    Text(
+                        text = "NEXTEP",
+                        fontWeight = FontWeight.Black,
+                        fontSize = 18.sp,
+                        letterSpacing = 2.sp,
+                        color = TextPrimary
+                    )
                 },
                 actions = {
                     IconButton(onClick = { viewModel.refreshSchedules() }) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = "Refresh Schedules",
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = TextSecondary,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
+                    containerColor = SurfaceRoot
                 )
             )
         },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = SurfaceRoot
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -105,8 +90,8 @@ fun HomeScreen(
             if (isRefreshing) {
                 LinearProgressIndicator(
                     modifier = Modifier.fillMaxWidth(),
-                    color = ElectricIndigo,
-                    trackColor = DarkSlate
+                    color = AccentPrimary,
+                    trackColor = SurfaceElevated
                 )
             }
 
@@ -115,25 +100,48 @@ fun HomeScreen(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    contentPadding = PaddingValues(bottom = 24.dp)
                 ) {
-                    items(watchlist, key = { it.id }) { anime ->
-                        AnimeWatchlistCard(
-                            anime = anime,
-                            onIncrementWatched = { viewModel.incrementWatched(anime.id) },
-                            onOpenSettings = { showSettingsForAnime = anime },
-                            onDelete = { viewModel.removeSavedAnime(anime.id) }
+                    // Hero Airing Next Banner
+                    heroAnime?.let { hero ->
+                        item(key = "hero_banner") {
+                            HeroAiringNextCard(
+                                anime = hero,
+                                onOpenSettings = { showSettingsForAnime = hero }
+                            )
+                        }
+                    }
+
+                    // Section Title
+                    item(key = "section_header") {
+                        Text(
+                            text = "WATCHLIST",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.4.sp,
+                            color = TextSecondary,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                         )
+                    }
+
+                    // Watchlist Cards
+                    items(watchlist, key = { it.id }) { anime ->
+                        Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                            MinimalAnimeWatchlistCard(
+                                anime = anime,
+                                onIncrementWatched = { viewModel.incrementWatched(anime.id) },
+                                onOpenSettings = { showSettingsForAnime = anime }
+                            )
+                        }
                     }
                 }
             }
         }
     }
 
-    // Show Notification Settings Dialog
+    // Show Settings Dialog
     showSettingsForAnime?.let { anime ->
-        NotificationSettingsDialog(
+        MinimalNotificationSettingsDialog(
             anime = anime,
             onDismiss = { showSettingsForAnime = null },
             onSave = { enabled, leadTime ->
@@ -149,172 +157,9 @@ fun HomeScreen(
 }
 
 @Composable
-fun AnimeWatchlistCard(
+fun HeroAiringNextCard(
     anime: AnimeEntity,
-    onIncrementWatched: () -> Unit,
-    onOpenSettings: () -> Unit,
-    onDelete: () -> Unit
-) {
-    val context = LocalContext.current
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .border(1.dp, BorderSubtle, RoundedCornerShape(20.dp)),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            // Cover Image
-            AsyncImage(
-                model = anime.coverImage,
-                contentDescription = anime.title,
-                modifier = Modifier
-                    .width(90.dp)
-                    .height(130.dp)
-                    .clip(RoundedCornerShape(14.dp)),
-                contentScale = ContentScale.Crop
-            )
-
-            // Content Info
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(130.dp),
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = anime.title,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-
-                        IconButton(
-                            onClick = onOpenSettings,
-                            modifier = Modifier.size(28.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.MoreVert,
-                                contentDescription = "Settings",
-                                tint = TextSecondary
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    // Status Badge & Site Link
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        anime.status?.let { status ->
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(CyberCyan.copy(alpha = 0.15f))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = status.replace("_", " "),
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = CyberCyan
-                                )
-                            }
-                        }
-
-                        anime.siteUrl?.let { url ->
-                            Text(
-                                text = "AniList ↗",
-                                fontSize = 10.sp,
-                                color = ElectricIndigoLight,
-                                modifier = Modifier.clickable {
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                                    context.startActivity(intent)
-                                }
-                            )
-                        }
-                    }
-                }
-
-                // Live Countdown Ticker
-                LiveCountdownBadge(
-                    airingAt = anime.nextEpisodeAiringAt,
-                    episodeNumber = anime.nextEpisodeNumber
-                )
-
-                // Watched Progress Row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    val progressText = buildString {
-                        append("Watched: Ep ${anime.watchedEpisodes}")
-                        if (anime.totalEpisodes != null) {
-                            append(" / ${anime.totalEpisodes}")
-                        }
-                    }
-
-                    Text(
-                        text = progressText,
-                        fontSize = 12.sp,
-                        color = TextSecondary,
-                        fontWeight = FontWeight.Medium
-                    )
-
-                    Button(
-                        onClick = onIncrementWatched,
-                        shape = RoundedCornerShape(10.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = ElectricIndigo.copy(alpha = 0.2f)),
-                        modifier = Modifier.height(30.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "Add watched episode",
-                                tint = ElectricIndigo,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Text(
-                                text = "+1 Ep",
-                                fontSize = 11.sp,
-                                color = ElectricIndigo,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun LiveCountdownBadge(
-    airingAt: Long?,
-    episodeNumber: Int?
+    onOpenSettings: () -> Unit
 ) {
     var currentTimeMillis by remember { mutableStateOf(System.currentTimeMillis()) }
 
@@ -325,68 +170,310 @@ fun LiveCountdownBadge(
         }
     }
 
-    if (airingAt == null || episodeNumber == null) {
-        Text(
-            text = "No upcoming episode date",
-            fontSize = 11.sp,
-            color = TextMuted
-        )
-        return
-    }
-
-    val targetMillis = airingAt * 1000L
-    val diffMillis = targetMillis - currentTimeMillis
-
-    if (diffMillis <= 0) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .border(1.dp, SurfaceBorder, RoundedCornerShape(8.dp)),
+        colors = CardDefaults.cardColors(containerColor = SurfaceElevated)
+    ) {
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .background(EmeraldGlow.copy(alpha = 0.15f))
-                .padding(horizontal = 8.dp, vertical = 4.dp)
+                .fillMaxWidth()
+                .height(180.dp)
         ) {
-            Text(
-                text = "Ep $episodeNumber: Airing Now! 🍿",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = EmeraldGlow
+            // Background Image
+            AsyncImage(
+                model = anime.bannerImage ?: anime.coverImage,
+                contentDescription = anime.title,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
             )
-        }
-    } else {
-        val totalSeconds = diffMillis / 1000
-        val days = totalSeconds / (24 * 3600)
-        val hours = (totalSeconds % (24 * 3600)) / 3600
-        val minutes = (totalSeconds % 3600) / 60
-        val seconds = totalSeconds % 60
 
-        val countdownStr = buildString {
-            if (days > 0) append("${days}d ")
-            append(String.format("%02dh %02dm %02ds", hours, minutes, seconds))
-        }
+            // Scrim Overlay
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color.Transparent,
+                                SurfaceElevated.copy(alpha = 0.85f),
+                                SurfaceElevated
+                            )
+                        )
+                    )
+            )
 
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .background(ElectricIndigo.copy(alpha = 0.12f))
-                .padding(horizontal = 8.dp, vertical = 4.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            // Content
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(14.dp),
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
-                Icon(
-                    imageVector = Icons.Default.Schedule,
-                    contentDescription = null,
-                    tint = ElectricIndigo,
-                    modifier = Modifier.size(12.dp)
-                )
-                Text(
-                    text = "Ep $episodeNumber in $countdownStr",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = ElectricIndigo
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(7.dp)
+                                .clip(CircleShape)
+                                .background(StatusLive)
+                        )
+                        Text(
+                            text = "AIRING NEXT",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.2.sp,
+                            color = StatusLive
+                        )
+                    }
+
+                    IconButton(
+                        onClick = onOpenSettings,
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "Options",
+                            tint = TextSecondary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+
+                Column {
+                    Text(
+                        text = anime.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    val countdownText = remember(anime.nextEpisodeAiringAt, currentTimeMillis) {
+                        calculateCountdownText(anime.nextEpisodeAiringAt, currentTimeMillis)
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "EP ${anime.nextEpisodeNumber ?: "?"}",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp,
+                            color = AccentPrimary
+                        )
+
+                        Text(
+                            text = "•",
+                            fontSize = 11.sp,
+                            color = TextSecondary
+                        )
+
+                        Text(
+                            text = countdownText,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextPrimary
+                        )
+                    }
+                }
             }
         }
+    }
+}
+
+@Composable
+fun MinimalAnimeWatchlistCard(
+    anime: AnimeEntity,
+    onIncrementWatched: () -> Unit,
+    onOpenSettings: () -> Unit
+) {
+    val haptic = LocalHapticFeedback.current
+    var currentTimeMillis by remember { mutableStateOf(System.currentTimeMillis()) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(1000)
+            currentTimeMillis = System.currentTimeMillis()
+        }
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .border(1.dp, SurfaceBorder, RoundedCornerShape(8.dp)),
+        colors = CardDefaults.cardColors(containerColor = SurfaceElevated)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Asymmetric Poster 2:3 Aspect Ratio
+            AsyncImage(
+                model = anime.coverImage,
+                contentDescription = anime.title,
+                modifier = Modifier
+                    .width(72.dp)
+                    .height(108.dp) // 2:3 ratio
+                    .clip(RoundedCornerShape(6.dp)),
+                contentScale = ContentScale.Crop
+            )
+
+            // Content
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(108.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Text(
+                            text = anime.title,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        IconButton(
+                            onClick = onOpenSettings,
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "Settings",
+                                tint = TextSecondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Micro-caps metadata tag
+                    val isAiringSoon = anime.nextEpisodeAiringAt?.let {
+                        (it * 1000L - currentTimeMillis) in 0..(24 * 3600 * 1000L)
+                    } ?: false
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(if (isAiringSoon) StatusLive else StatusUpcoming)
+                        )
+
+                        val nextEpText = anime.nextEpisodeNumber?.let { "EP $it" } ?: (anime.status ?: "AIRING")
+                        Text(
+                            text = nextEpText.uppercase(),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.2.sp,
+                            color = TextSecondary
+                        )
+
+                        anime.nextEpisodeAiringAt?.let { ts ->
+                            Text(text = "•", fontSize = 10.sp, color = TextSecondary)
+                            Text(
+                                text = calculateCountdownText(ts, currentTimeMillis),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (isAiringSoon) StatusLive else TextSecondary
+                            )
+                        }
+                    }
+                }
+
+                // Watched Progress Row with Haptic Feedback
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val progressLabel = buildString {
+                        append("WATCHED ${anime.watchedEpisodes}")
+                        if (anime.totalEpisodes != null) {
+                            append(" / ${anime.totalEpisodes}")
+                        }
+                    }
+
+                    Text(
+                        text = progressLabel,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp,
+                        color = TextSecondary
+                    )
+
+                    // Minimalist +1 Watched Button with Haptic
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(SurfaceElevatedHigh)
+                            .border(1.dp, SurfaceBorder, RoundedCornerShape(4.dp))
+                            .clickable {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onIncrementWatched()
+                            }
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "+1 EP",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp,
+                            color = TextPrimary
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun calculateCountdownText(airingAt: Long?, currentTimeMillis: Long): String {
+    if (airingAt == null) return "TBA"
+    val diff = (airingAt * 1000L) - currentTimeMillis
+    if (diff <= 0) return "Airing now"
+
+    val totalSeconds = diff / 1000
+    val days = totalSeconds / (24 * 3600)
+    val hours = (totalSeconds % (24 * 3600)) / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+
+    return if (days > 0) {
+        "${days}d ${hours}h"
+    } else {
+        String.format("%02d:%02d:%02d", hours, minutes, seconds)
     }
 }
 
@@ -399,59 +486,41 @@ fun EmptyWatchlistState(onNavigateToSearch: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Box(
-            modifier = Modifier
-                .size(80.dp)
-                .clip(CircleShape)
-                .background(ElectricIndigo.copy(alpha = 0.15f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.BookmarkBorder,
-                contentDescription = null,
-                tint = ElectricIndigo,
-                modifier = Modifier.size(40.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
         Text(
-            text = "Your Watchlist is Empty",
-            style = MaterialTheme.typography.titleMedium,
+            text = "NO SAVED SHOWS",
+            fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
+            letterSpacing = 1.6.sp,
+            color = TextSecondary
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Search and add your favorite anime to receive live countdowns & episode notifications.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = TextSecondary,
-            fontSize = 13.sp
+            text = "Track your favorite anime releases with exact alerts.",
+            fontSize = 13.sp,
+            color = TextSecondary
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
             onClick = onNavigateToSearch,
-            shape = RoundedCornerShape(14.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = ElectricIndigo)
+            shape = RoundedCornerShape(6.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = AccentPrimary)
         ) {
-            Icon(
-                imageVector = Icons.Default.Search,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
+            Text(
+                text = "EXPLORE ANIME",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.2.sp
             )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Search Anime Now", fontWeight = FontWeight.SemiBold)
         }
     }
 }
 
 @Composable
-fun NotificationSettingsDialog(
+fun MinimalNotificationSettingsDialog(
     anime: AnimeEntity,
     onDismiss: () -> Unit,
     onSave: (enabled: Boolean, leadTime: Int) -> Unit,
@@ -464,17 +533,20 @@ fun NotificationSettingsDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Show Settings",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+                text = "ALERT PREFERENCES",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.4.sp,
+                color = TextSecondary
             )
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(
                     text = anime.title,
-                    fontSize = 13.sp,
-                    color = TextSecondary,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -484,21 +556,31 @@ fun NotificationSettingsDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Enable Notifications", fontSize = 14.sp)
+                    Text("Push Notifications", fontSize = 13.sp, color = TextPrimary)
                     Switch(
                         checked = enabled,
                         onCheckedChange = { enabled = it },
-                        colors = SwitchDefaults.colors(checkedThumbColor = ElectricIndigo)
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = TextPrimary,
+                            checkedTrackColor = AccentPrimary,
+                            uncheckedTrackColor = SurfaceElevatedHigh
+                        )
                     )
                 }
 
                 if (enabled) {
-                    Text("Remind Me:", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    Text(
+                        text = "DELIVERY TIME",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.2.sp,
+                        color = TextSecondary
+                    )
 
                     val options = listOf(
-                        0 to "At Exact Airing Time",
-                        15 to "15 Minutes Before",
-                        60 to "1 Hour Before"
+                        0 to "At air time",
+                        15 to "15 minutes prior",
+                        60 to "1 hour prior"
                     )
 
                     options.forEach { (leadTime, label) ->
@@ -513,45 +595,55 @@ fun NotificationSettingsDialog(
                             RadioButton(
                                 selected = (selectedLeadTime == leadTime),
                                 onClick = { selectedLeadTime = leadTime },
-                                colors = RadioButtonDefaults.colors(selectedColor = ElectricIndigo)
+                                colors = RadioButtonDefaults.colors(selectedColor = AccentPrimary)
                             )
-                            Text(label, fontSize = 13.sp)
+                            Text(label, fontSize = 13.sp, color = TextPrimary)
                         }
                     }
                 }
 
-                HorizontalDivider(color = BorderSubtle)
+                HorizontalDivider(color = SurfaceBorder)
 
                 OutlinedButton(
                     onClick = onDelete,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonCoral),
-                    border = BorderStroke(1.dp, NeonCoral.copy(alpha = 0.5f))
+                    shape = RoundedCornerShape(6.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = AccentPrimary),
+                    border = BorderStroke(1.dp, AccentPrimary.copy(alpha = 0.5f))
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
+                    Text(
+                        text = "REMOVE FROM WATCHLIST",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.2.sp
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Remove from Watchlist", fontSize = 13.sp)
                 }
             }
         },
         confirmButton = {
             Button(
                 onClick = { onSave(enabled, selectedLeadTime) },
-                colors = ButtonDefaults.buttonColors(containerColor = ElectricIndigo)
+                shape = RoundedCornerShape(6.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = AccentPrimary)
             ) {
-                Text("Save")
+                Text(
+                    text = "SAVE",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = TextSecondary)
+                Text(
+                    text = "CANCEL",
+                    fontSize = 11.sp,
+                    color = TextSecondary
+                )
             }
         },
-        containerColor = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(20.dp)
+        containerColor = SurfaceElevated,
+        shape = RoundedCornerShape(8.dp)
     )
 }

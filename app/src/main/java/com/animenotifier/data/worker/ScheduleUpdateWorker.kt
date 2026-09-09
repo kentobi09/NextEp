@@ -27,6 +27,10 @@ class ScheduleUpdateWorker(
                 val updatedEntity = saved.copy(
                     title = updatedMedia.displayTitle(),
                     coverImage = updatedMedia.bestCoverImage(),
+                    bannerImage = updatedMedia.bannerImage ?: saved.bannerImage,
+                    synopsis = updatedMedia.cleanDescription(),
+                    studio = updatedMedia.primaryStudio() ?: saved.studio,
+                    durationMinutes = updatedMedia.duration ?: saved.durationMinutes,
                     totalEpisodes = updatedMedia.episodes ?: saved.totalEpisodes,
                     nextEpisodeNumber = nextEp?.episode ?: saved.nextEpisodeNumber,
                     nextEpisodeAiringAt = nextEp?.airingAt ?: saved.nextEpisodeAiringAt,

@@ -8,18 +8,21 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -46,22 +49,21 @@ fun SearchScreen(viewModel: AnimeViewModel) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background)
-                    .padding(16.dp)
+                    .background(SurfaceRoot)
+                    .padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 8.dp)
             ) {
-                // Search Input Field
+                // Clean icon-free text field
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { viewModel.onSearchQueryChanged(it) },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp)),
-                    placeholder = { Text("Search anime (e.g. Solo Leveling)...", color = TextMuted) },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = null,
-                            tint = ElectricIndigo
+                        .clip(RoundedCornerShape(8.dp)),
+                    placeholder = {
+                        Text(
+                            text = "Search titles, studios...",
+                            color = TextSecondary,
+                            fontSize = 14.sp
                         )
                     },
                     trailingIcon = {
@@ -70,60 +72,64 @@ fun SearchScreen(viewModel: AnimeViewModel) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
                                     contentDescription = "Clear",
-                                    tint = TextSecondary
+                                    tint = TextSecondary,
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         }
                     },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = DarkSlate,
-                        unfocusedContainerColor = DarkSlate,
-                        focusedBorderColor = ElectricIndigo,
-                        unfocusedBorderColor = BorderSubtle,
+                        focusedContainerColor = SurfaceElevated,
+                        unfocusedContainerColor = SurfaceElevated,
+                        focusedBorderColor = TextPrimary,
+                        unfocusedBorderColor = SurfaceBorder,
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary
                     ),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(8.dp)
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Discovery Filter Chips
+                // Category Chips
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    item {
-                        FilterChip(
-                            selected = (activeChip == DiscoveryChip.TRENDING),
-                            onClick = { viewModel.onChipSelected(DiscoveryChip.TRENDING) },
-                            label = { Text("🔥 Trending") },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = ElectricIndigo,
-                                selectedLabelColor = Color.White,
-                                containerColor = DarkSlate,
-                                labelColor = TextSecondary
-                            )
-                        )
-                    }
+                    val chips = listOf(
+                        DiscoveryChip.TRENDING,
+                        DiscoveryChip.TOP_AIRING,
+                        DiscoveryChip.AIRING_TODAY
+                    )
 
-                    item {
-                        FilterChip(
-                            selected = (activeChip == DiscoveryChip.AIRING_TODAY),
-                            onClick = { viewModel.onChipSelected(DiscoveryChip.AIRING_TODAY) },
-                            label = { Text("🍿 Airing Today") },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = NeonCoral,
-                                selectedLabelColor = Color.White,
-                                containerColor = DarkSlate,
-                                labelColor = TextSecondary
+                    items(chips.size) { index ->
+                        val chip = chips[index]
+                        val isSelected = (activeChip == chip)
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (isSelected) AccentPrimary else SurfaceElevated)
+                                .border(
+                                    1.dp,
+                                    if (isSelected) AccentPrimary else SurfaceBorder,
+                                    RoundedCornerShape(6.dp)
+                                )
+                                .clickable { viewModel.onChipSelected(chip) }
+                                .padding(horizontal = 12.dp, vertical = 7.dp)
+                        ) {
+                            Text(
+                                text = chip.label.uppercase(),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.1.sp,
+                                color = if (isSelected) TextPrimary else TextSecondary
                             )
-                        )
+                        }
                     }
                 }
             }
         },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = SurfaceRoot
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -133,7 +139,8 @@ fun SearchScreen(viewModel: AnimeViewModel) {
             if (isSearching) {
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center),
-                    color = ElectricIndigo
+                    color = AccentPrimary,
+                    strokeWidth = 2.dp
                 )
             } else if (searchResults.isEmpty()) {
                 Box(
@@ -143,9 +150,9 @@ fun SearchScreen(viewModel: AnimeViewModel) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (searchQuery.isNotBlank()) "No anime found for '$searchQuery'." else "Search for your favorite anime above.",
+                        text = if (searchQuery.isNotBlank()) "No anime found." else "Explore popular releases above.",
                         color = TextSecondary,
-                        fontSize = 14.sp
+                        fontSize = 13.sp
                     )
                 }
             } else {
@@ -153,12 +160,12 @@ fun SearchScreen(viewModel: AnimeViewModel) {
                     columns = GridCells.Fixed(2),
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     items(searchResults, key = { it.id }) { media ->
                         val isSaved = savedIds.contains(media.id)
-                        AnimeSearchResultCard(
+                        MinimalSearchResultCard(
                             media = media,
                             isSaved = isSaved,
                             onToggleSave = { viewModel.toggleSaveAnime(media) }
@@ -171,87 +178,78 @@ fun SearchScreen(viewModel: AnimeViewModel) {
 }
 
 @Composable
-fun AnimeSearchResultCard(
+fun MinimalSearchResultCard(
     media: AniListMedia,
     isSaved: Boolean,
     onToggleSave: () -> Unit
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .border(
-                width = 1.dp,
-                color = if (isSaved) ElectricIndigo else BorderSubtle,
-                shape = RoundedCornerShape(18.dp)
-            ),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    val haptic = LocalHapticFeedback.current
+
+    Column(
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        // 2:3 Aspect Ratio Portrait Card
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(2f / 3f)
+                .clip(RoundedCornerShape(8.dp))
+                .border(1.dp, if (isSaved) AccentPrimary.copy(alpha = 0.6f) else SurfaceBorder, RoundedCornerShape(8.dp))
+                .background(SurfaceElevated)
+        ) {
+            AsyncImage(
+                model = media.bestCoverImage(),
+                contentDescription = media.displayTitle(),
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+
+            // Minimalist Single Tap Toggle Button
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp)
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp)
+                    .size(30.dp)
+                    .clip(CircleShape)
+                    .background(if (isSaved) AccentPrimary else SurfaceRoot.copy(alpha = 0.85f))
+                    .border(1.dp, if (isSaved) AccentPrimary else SurfaceBorder, CircleShape)
+                    .clickable {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onToggleSave()
+                    },
+                contentAlignment = Alignment.Center
             ) {
-                AsyncImage(
-                    model = media.bestCoverImage(),
-                    contentDescription = media.displayTitle(),
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
+                Icon(
+                    imageVector = if (isSaved) Icons.Default.Check else Icons.Default.Add,
+                    contentDescription = if (isSaved) "Saved" else "Save",
+                    tint = TextPrimary,
+                    modifier = Modifier.size(16.dp)
                 )
-
-                // Single Tap Add / Remove Toggle Button
-                IconButton(
-                    onClick = onToggleSave,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp)
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (isSaved) EmeraldGlow else DarkSlate.copy(alpha = 0.85f)
-                        )
-                ) {
-                    Icon(
-                        imageVector = if (isSaved) Icons.Default.Check else Icons.Default.Add,
-                        contentDescription = if (isSaved) "Saved" else "Save",
-                        tint = Color.White,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp)
-            ) {
-                Text(
-                    text = media.displayTitle(),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                media.nextAiringEpisode?.let { ep ->
-                    Text(
-                        text = "Ep ${ep.episode} upcoming",
-                        fontSize = 11.sp,
-                        color = ElectricIndigo,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                } ?: run {
-                    Text(
-                        text = media.status ?: "Finished",
-                        fontSize = 11.sp,
-                        color = TextMuted
-                    )
-                }
             }
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Title
+        Text(
+            text = media.displayTitle(),
+            fontWeight = FontWeight.Bold,
+            fontSize = 13.sp,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            color = TextPrimary
+        )
+
+        Spacer(modifier = Modifier.height(2.dp))
+
+        // Metadata micro-caps
+        val meta = media.nextAiringEpisode?.let { "EP ${it.episode}" } ?: (media.status ?: "FINISHED")
+        Text(
+            text = meta.uppercase(),
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.sp,
+            color = TextSecondary
+        )
     }
 }

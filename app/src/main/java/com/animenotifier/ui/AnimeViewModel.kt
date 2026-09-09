@@ -15,8 +15,11 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
-enum class DiscoveryChip {
-    SEARCH, AIRING_TODAY, TRENDING
+enum class DiscoveryChip(val label: String) {
+    TRENDING("Trending This Season"),
+    TOP_AIRING("Top Airing"),
+    AIRING_TODAY("Airing Today"),
+    SEARCH("Search")
 }
 
 class AnimeViewModel(application: Application) : AndroidViewModel(application) {
@@ -33,6 +36,14 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
 
     val savedAnimeList: StateFlow<List<AnimeEntity>> = repository.savedAnimeList
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Hero anime: Show from watchlist airing earliest in the future
+    val nextAiringHero: StateFlow<AnimeEntity?> = savedAnimeList.map { list ->
+        val now = System.currentTimeMillis() / 1000L
+        list.filter { it.nextEpisodeAiringAt != null && it.nextEpisodeAiringAt > now }
+            .minByOrNull { it.nextEpisodeAiringAt!! }
+            ?: list.firstOrNull { it.nextEpisodeAiringAt != null }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -51,6 +62,9 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _selectedScheduleDay = MutableStateFlow(currentDayOfWeek())
     val selectedScheduleDay: StateFlow<Int> = _selectedScheduleDay.asStateFlow()
+
+    private val _selectedAnimeDetail = MutableStateFlow<AnimeEntity?>(null)
+    val selectedAnimeDetail: StateFlow<AnimeEntity?> = _selectedAnimeDetail.asStateFlow()
 
     private var searchJob: Job? = null
 
@@ -92,6 +106,7 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
             val results = when (chip) {
                 DiscoveryChip.AIRING_TODAY -> repository.getAiringToday()
                 DiscoveryChip.TRENDING -> repository.getTrendingThisSeason()
+                DiscoveryChip.TOP_AIRING -> repository.getTopAiring()
                 DiscoveryChip.SEARCH -> _searchResults.value
             }
             _searchResults.value = results
@@ -126,6 +141,10 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             repository.updateNotificationSettings(animeId, enabled, leadTimeMinutes)
         }
+    }
+
+    fun selectAnimeForDetail(anime: AnimeEntity?) {
+        _selectedAnimeDetail.value = anime
     }
 
     fun refreshSchedules() {

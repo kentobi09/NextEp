@@ -48,7 +48,7 @@ public final class AnimeDao_Impl implements AnimeDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "INSERT OR REPLACE INTO `saved_anime` (`id`,`title`,`coverImage`,`watchedEpisodes`,`totalEpisodes`,`nextEpisodeNumber`,`nextEpisodeAiringAt`,`airingDayOfWeek`,`status`,`siteUrl`,`notificationsEnabled`,`alertLeadTimeMinutes`,`updatedAt`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)";
+        return "INSERT OR REPLACE INTO `saved_anime` (`id`,`title`,`coverImage`,`bannerImage`,`synopsis`,`studio`,`durationMinutes`,`watchedEpisodes`,`totalEpisodes`,`nextEpisodeNumber`,`nextEpisodeAiringAt`,`airingDayOfWeek`,`status`,`siteUrl`,`notificationsEnabled`,`alertLeadTimeMinutes`,`updatedAt`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
       }
 
       @Override
@@ -57,41 +57,61 @@ public final class AnimeDao_Impl implements AnimeDao {
         statement.bindLong(1, entity.getId());
         statement.bindString(2, entity.getTitle());
         statement.bindString(3, entity.getCoverImage());
-        statement.bindLong(4, entity.getWatchedEpisodes());
-        if (entity.getTotalEpisodes() == null) {
+        if (entity.getBannerImage() == null) {
+          statement.bindNull(4);
+        } else {
+          statement.bindString(4, entity.getBannerImage());
+        }
+        if (entity.getSynopsis() == null) {
           statement.bindNull(5);
         } else {
-          statement.bindLong(5, entity.getTotalEpisodes());
+          statement.bindString(5, entity.getSynopsis());
         }
-        if (entity.getNextEpisodeNumber() == null) {
+        if (entity.getStudio() == null) {
           statement.bindNull(6);
         } else {
-          statement.bindLong(6, entity.getNextEpisodeNumber());
+          statement.bindString(6, entity.getStudio());
         }
-        if (entity.getNextEpisodeAiringAt() == null) {
+        if (entity.getDurationMinutes() == null) {
           statement.bindNull(7);
         } else {
-          statement.bindLong(7, entity.getNextEpisodeAiringAt());
+          statement.bindLong(7, entity.getDurationMinutes());
         }
-        if (entity.getAiringDayOfWeek() == null) {
-          statement.bindNull(8);
-        } else {
-          statement.bindLong(8, entity.getAiringDayOfWeek());
-        }
-        if (entity.getStatus() == null) {
+        statement.bindLong(8, entity.getWatchedEpisodes());
+        if (entity.getTotalEpisodes() == null) {
           statement.bindNull(9);
         } else {
-          statement.bindString(9, entity.getStatus());
+          statement.bindLong(9, entity.getTotalEpisodes());
         }
-        if (entity.getSiteUrl() == null) {
+        if (entity.getNextEpisodeNumber() == null) {
           statement.bindNull(10);
         } else {
-          statement.bindString(10, entity.getSiteUrl());
+          statement.bindLong(10, entity.getNextEpisodeNumber());
+        }
+        if (entity.getNextEpisodeAiringAt() == null) {
+          statement.bindNull(11);
+        } else {
+          statement.bindLong(11, entity.getNextEpisodeAiringAt());
+        }
+        if (entity.getAiringDayOfWeek() == null) {
+          statement.bindNull(12);
+        } else {
+          statement.bindLong(12, entity.getAiringDayOfWeek());
+        }
+        if (entity.getStatus() == null) {
+          statement.bindNull(13);
+        } else {
+          statement.bindString(13, entity.getStatus());
+        }
+        if (entity.getSiteUrl() == null) {
+          statement.bindNull(14);
+        } else {
+          statement.bindString(14, entity.getSiteUrl());
         }
         final int _tmp = entity.getNotificationsEnabled() ? 1 : 0;
-        statement.bindLong(11, _tmp);
-        statement.bindLong(12, entity.getAlertLeadTimeMinutes());
-        statement.bindLong(13, entity.getUpdatedAt());
+        statement.bindLong(15, _tmp);
+        statement.bindLong(16, entity.getAlertLeadTimeMinutes());
+        statement.bindLong(17, entity.getUpdatedAt());
       }
     };
     this.__preparedStmtOfDeleteById = new SharedSQLiteStatement(__db) {
@@ -234,6 +254,10 @@ public final class AnimeDao_Impl implements AnimeDao {
           final int _cursorIndexOfId = CursorUtil.getColumnIndexOrThrow(_cursor, "id");
           final int _cursorIndexOfTitle = CursorUtil.getColumnIndexOrThrow(_cursor, "title");
           final int _cursorIndexOfCoverImage = CursorUtil.getColumnIndexOrThrow(_cursor, "coverImage");
+          final int _cursorIndexOfBannerImage = CursorUtil.getColumnIndexOrThrow(_cursor, "bannerImage");
+          final int _cursorIndexOfSynopsis = CursorUtil.getColumnIndexOrThrow(_cursor, "synopsis");
+          final int _cursorIndexOfStudio = CursorUtil.getColumnIndexOrThrow(_cursor, "studio");
+          final int _cursorIndexOfDurationMinutes = CursorUtil.getColumnIndexOrThrow(_cursor, "durationMinutes");
           final int _cursorIndexOfWatchedEpisodes = CursorUtil.getColumnIndexOrThrow(_cursor, "watchedEpisodes");
           final int _cursorIndexOfTotalEpisodes = CursorUtil.getColumnIndexOrThrow(_cursor, "totalEpisodes");
           final int _cursorIndexOfNextEpisodeNumber = CursorUtil.getColumnIndexOrThrow(_cursor, "nextEpisodeNumber");
@@ -253,6 +277,30 @@ public final class AnimeDao_Impl implements AnimeDao {
             _tmpTitle = _cursor.getString(_cursorIndexOfTitle);
             final String _tmpCoverImage;
             _tmpCoverImage = _cursor.getString(_cursorIndexOfCoverImage);
+            final String _tmpBannerImage;
+            if (_cursor.isNull(_cursorIndexOfBannerImage)) {
+              _tmpBannerImage = null;
+            } else {
+              _tmpBannerImage = _cursor.getString(_cursorIndexOfBannerImage);
+            }
+            final String _tmpSynopsis;
+            if (_cursor.isNull(_cursorIndexOfSynopsis)) {
+              _tmpSynopsis = null;
+            } else {
+              _tmpSynopsis = _cursor.getString(_cursorIndexOfSynopsis);
+            }
+            final String _tmpStudio;
+            if (_cursor.isNull(_cursorIndexOfStudio)) {
+              _tmpStudio = null;
+            } else {
+              _tmpStudio = _cursor.getString(_cursorIndexOfStudio);
+            }
+            final Integer _tmpDurationMinutes;
+            if (_cursor.isNull(_cursorIndexOfDurationMinutes)) {
+              _tmpDurationMinutes = null;
+            } else {
+              _tmpDurationMinutes = _cursor.getInt(_cursorIndexOfDurationMinutes);
+            }
             final int _tmpWatchedEpisodes;
             _tmpWatchedEpisodes = _cursor.getInt(_cursorIndexOfWatchedEpisodes);
             final Integer _tmpTotalEpisodes;
@@ -299,7 +347,7 @@ public final class AnimeDao_Impl implements AnimeDao {
             _tmpAlertLeadTimeMinutes = _cursor.getInt(_cursorIndexOfAlertLeadTimeMinutes);
             final long _tmpUpdatedAt;
             _tmpUpdatedAt = _cursor.getLong(_cursorIndexOfUpdatedAt);
-            _item = new AnimeEntity(_tmpId,_tmpTitle,_tmpCoverImage,_tmpWatchedEpisodes,_tmpTotalEpisodes,_tmpNextEpisodeNumber,_tmpNextEpisodeAiringAt,_tmpAiringDayOfWeek,_tmpStatus,_tmpSiteUrl,_tmpNotificationsEnabled,_tmpAlertLeadTimeMinutes,_tmpUpdatedAt);
+            _item = new AnimeEntity(_tmpId,_tmpTitle,_tmpCoverImage,_tmpBannerImage,_tmpSynopsis,_tmpStudio,_tmpDurationMinutes,_tmpWatchedEpisodes,_tmpTotalEpisodes,_tmpNextEpisodeNumber,_tmpNextEpisodeAiringAt,_tmpAiringDayOfWeek,_tmpStatus,_tmpSiteUrl,_tmpNotificationsEnabled,_tmpAlertLeadTimeMinutes,_tmpUpdatedAt);
             _result.add(_item);
           }
           return _result;
@@ -329,6 +377,10 @@ public final class AnimeDao_Impl implements AnimeDao {
           final int _cursorIndexOfId = CursorUtil.getColumnIndexOrThrow(_cursor, "id");
           final int _cursorIndexOfTitle = CursorUtil.getColumnIndexOrThrow(_cursor, "title");
           final int _cursorIndexOfCoverImage = CursorUtil.getColumnIndexOrThrow(_cursor, "coverImage");
+          final int _cursorIndexOfBannerImage = CursorUtil.getColumnIndexOrThrow(_cursor, "bannerImage");
+          final int _cursorIndexOfSynopsis = CursorUtil.getColumnIndexOrThrow(_cursor, "synopsis");
+          final int _cursorIndexOfStudio = CursorUtil.getColumnIndexOrThrow(_cursor, "studio");
+          final int _cursorIndexOfDurationMinutes = CursorUtil.getColumnIndexOrThrow(_cursor, "durationMinutes");
           final int _cursorIndexOfWatchedEpisodes = CursorUtil.getColumnIndexOrThrow(_cursor, "watchedEpisodes");
           final int _cursorIndexOfTotalEpisodes = CursorUtil.getColumnIndexOrThrow(_cursor, "totalEpisodes");
           final int _cursorIndexOfNextEpisodeNumber = CursorUtil.getColumnIndexOrThrow(_cursor, "nextEpisodeNumber");
@@ -348,6 +400,30 @@ public final class AnimeDao_Impl implements AnimeDao {
             _tmpTitle = _cursor.getString(_cursorIndexOfTitle);
             final String _tmpCoverImage;
             _tmpCoverImage = _cursor.getString(_cursorIndexOfCoverImage);
+            final String _tmpBannerImage;
+            if (_cursor.isNull(_cursorIndexOfBannerImage)) {
+              _tmpBannerImage = null;
+            } else {
+              _tmpBannerImage = _cursor.getString(_cursorIndexOfBannerImage);
+            }
+            final String _tmpSynopsis;
+            if (_cursor.isNull(_cursorIndexOfSynopsis)) {
+              _tmpSynopsis = null;
+            } else {
+              _tmpSynopsis = _cursor.getString(_cursorIndexOfSynopsis);
+            }
+            final String _tmpStudio;
+            if (_cursor.isNull(_cursorIndexOfStudio)) {
+              _tmpStudio = null;
+            } else {
+              _tmpStudio = _cursor.getString(_cursorIndexOfStudio);
+            }
+            final Integer _tmpDurationMinutes;
+            if (_cursor.isNull(_cursorIndexOfDurationMinutes)) {
+              _tmpDurationMinutes = null;
+            } else {
+              _tmpDurationMinutes = _cursor.getInt(_cursorIndexOfDurationMinutes);
+            }
             final int _tmpWatchedEpisodes;
             _tmpWatchedEpisodes = _cursor.getInt(_cursorIndexOfWatchedEpisodes);
             final Integer _tmpTotalEpisodes;
@@ -394,7 +470,7 @@ public final class AnimeDao_Impl implements AnimeDao {
             _tmpAlertLeadTimeMinutes = _cursor.getInt(_cursorIndexOfAlertLeadTimeMinutes);
             final long _tmpUpdatedAt;
             _tmpUpdatedAt = _cursor.getLong(_cursorIndexOfUpdatedAt);
-            _item = new AnimeEntity(_tmpId,_tmpTitle,_tmpCoverImage,_tmpWatchedEpisodes,_tmpTotalEpisodes,_tmpNextEpisodeNumber,_tmpNextEpisodeAiringAt,_tmpAiringDayOfWeek,_tmpStatus,_tmpSiteUrl,_tmpNotificationsEnabled,_tmpAlertLeadTimeMinutes,_tmpUpdatedAt);
+            _item = new AnimeEntity(_tmpId,_tmpTitle,_tmpCoverImage,_tmpBannerImage,_tmpSynopsis,_tmpStudio,_tmpDurationMinutes,_tmpWatchedEpisodes,_tmpTotalEpisodes,_tmpNextEpisodeNumber,_tmpNextEpisodeAiringAt,_tmpAiringDayOfWeek,_tmpStatus,_tmpSiteUrl,_tmpNotificationsEnabled,_tmpAlertLeadTimeMinutes,_tmpUpdatedAt);
             _result.add(_item);
           }
           return _result;
@@ -422,6 +498,10 @@ public final class AnimeDao_Impl implements AnimeDao {
           final int _cursorIndexOfId = CursorUtil.getColumnIndexOrThrow(_cursor, "id");
           final int _cursorIndexOfTitle = CursorUtil.getColumnIndexOrThrow(_cursor, "title");
           final int _cursorIndexOfCoverImage = CursorUtil.getColumnIndexOrThrow(_cursor, "coverImage");
+          final int _cursorIndexOfBannerImage = CursorUtil.getColumnIndexOrThrow(_cursor, "bannerImage");
+          final int _cursorIndexOfSynopsis = CursorUtil.getColumnIndexOrThrow(_cursor, "synopsis");
+          final int _cursorIndexOfStudio = CursorUtil.getColumnIndexOrThrow(_cursor, "studio");
+          final int _cursorIndexOfDurationMinutes = CursorUtil.getColumnIndexOrThrow(_cursor, "durationMinutes");
           final int _cursorIndexOfWatchedEpisodes = CursorUtil.getColumnIndexOrThrow(_cursor, "watchedEpisodes");
           final int _cursorIndexOfTotalEpisodes = CursorUtil.getColumnIndexOrThrow(_cursor, "totalEpisodes");
           final int _cursorIndexOfNextEpisodeNumber = CursorUtil.getColumnIndexOrThrow(_cursor, "nextEpisodeNumber");
@@ -440,6 +520,30 @@ public final class AnimeDao_Impl implements AnimeDao {
             _tmpTitle = _cursor.getString(_cursorIndexOfTitle);
             final String _tmpCoverImage;
             _tmpCoverImage = _cursor.getString(_cursorIndexOfCoverImage);
+            final String _tmpBannerImage;
+            if (_cursor.isNull(_cursorIndexOfBannerImage)) {
+              _tmpBannerImage = null;
+            } else {
+              _tmpBannerImage = _cursor.getString(_cursorIndexOfBannerImage);
+            }
+            final String _tmpSynopsis;
+            if (_cursor.isNull(_cursorIndexOfSynopsis)) {
+              _tmpSynopsis = null;
+            } else {
+              _tmpSynopsis = _cursor.getString(_cursorIndexOfSynopsis);
+            }
+            final String _tmpStudio;
+            if (_cursor.isNull(_cursorIndexOfStudio)) {
+              _tmpStudio = null;
+            } else {
+              _tmpStudio = _cursor.getString(_cursorIndexOfStudio);
+            }
+            final Integer _tmpDurationMinutes;
+            if (_cursor.isNull(_cursorIndexOfDurationMinutes)) {
+              _tmpDurationMinutes = null;
+            } else {
+              _tmpDurationMinutes = _cursor.getInt(_cursorIndexOfDurationMinutes);
+            }
             final int _tmpWatchedEpisodes;
             _tmpWatchedEpisodes = _cursor.getInt(_cursorIndexOfWatchedEpisodes);
             final Integer _tmpTotalEpisodes;
@@ -486,7 +590,7 @@ public final class AnimeDao_Impl implements AnimeDao {
             _tmpAlertLeadTimeMinutes = _cursor.getInt(_cursorIndexOfAlertLeadTimeMinutes);
             final long _tmpUpdatedAt;
             _tmpUpdatedAt = _cursor.getLong(_cursorIndexOfUpdatedAt);
-            _result = new AnimeEntity(_tmpId,_tmpTitle,_tmpCoverImage,_tmpWatchedEpisodes,_tmpTotalEpisodes,_tmpNextEpisodeNumber,_tmpNextEpisodeAiringAt,_tmpAiringDayOfWeek,_tmpStatus,_tmpSiteUrl,_tmpNotificationsEnabled,_tmpAlertLeadTimeMinutes,_tmpUpdatedAt);
+            _result = new AnimeEntity(_tmpId,_tmpTitle,_tmpCoverImage,_tmpBannerImage,_tmpSynopsis,_tmpStudio,_tmpDurationMinutes,_tmpWatchedEpisodes,_tmpTotalEpisodes,_tmpNextEpisodeNumber,_tmpNextEpisodeAiringAt,_tmpAiringDayOfWeek,_tmpStatus,_tmpSiteUrl,_tmpNotificationsEnabled,_tmpAlertLeadTimeMinutes,_tmpUpdatedAt);
           } else {
             _result = null;
           }

@@ -1,7 +1,6 @@
 package com.animenotifier.ui.theme
 
 import android.app.Activity
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -13,38 +12,40 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
-    primary = ElectricIndigo,
-    secondary = NeonCoral,
-    tertiary = CyberCyan,
-    background = DeepMidnight,
-    surface = DarkSlate,
-    surfaceVariant = DarkSlateVariant,
+    primary = AccentPrimary,
     onPrimary = TextPrimary,
-    onSecondary = TextPrimary,
+    primaryContainer = SurfaceElevatedHigh,
+    onPrimaryContainer = TextPrimary,
+    secondary = AccentMonochrome,
+    onSecondary = SurfaceRoot,
+    background = SurfaceRoot,
     onBackground = TextPrimary,
+    surface = SurfaceElevated,
     onSurface = TextPrimary,
+    surfaceVariant = SurfaceElevatedHigh,
     onSurfaceVariant = TextSecondary,
-    outline = BorderSubtle
+    outline = SurfaceBorder
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = ElectricIndigo,
-    secondary = NeonCoral,
-    tertiary = CyberCyan,
-    background = LightBackground,
-    surface = LightSurface,
-    surfaceVariant = LightSurfaceVariant,
+    primary = AccentPrimary,
     onPrimary = TextPrimary,
-    onSecondary = TextPrimary,
+    primaryContainer = LightSurfaceBorder,
+    onPrimaryContainer = LightTextPrimary,
+    secondary = LightTextPrimary,
+    onSecondary = LightSurfaceElevated,
+    background = LightSurfaceRoot,
     onBackground = LightTextPrimary,
+    surface = LightSurfaceElevated,
     onSurface = LightTextPrimary,
+    surfaceVariant = LightSurfaceBorder,
     onSurfaceVariant = LightTextSecondary,
-    outline = LightBorder
+    outline = LightSurfaceBorder
 )
 
 @Composable
 fun AnimeNotifierTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = true, // Default to true dark theme
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme

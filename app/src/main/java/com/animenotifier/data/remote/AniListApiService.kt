@@ -25,18 +25,28 @@ class AniListApiService {
 
     private val apiUrl = "https://graphql.anilist.co"
 
+    private val mediaFields = """
+        id
+        title { romaji english }
+        coverImage { extraLarge large medium }
+        bannerImage
+        description(asHtml: false)
+        episodes
+        duration
+        status
+        siteUrl
+        studios(isMain: true) {
+          nodes { name isAnimationStudio }
+        }
+        nextAiringEpisode { airingAt timeUntilAiring episode }
+    """.trimIndent()
+
     suspend fun searchAnime(searchQuery: String): List<AniListMedia> {
         val query = """
             query (${'$'}search: String) {
               Page(page: 1, perPage: 25) {
                 media(search: ${'$'}search, type: ANIME, sort: [POPULARITY_DESC]) {
-                  id
-                  title { romaji english }
-                  coverImage { extraLarge large medium }
-                  episodes
-                  status
-                  siteUrl
-                  nextAiringEpisode { airingAt timeUntilAiring episode }
+                  $mediaFields
                 }
               }
             }
@@ -69,13 +79,7 @@ class AniListApiService {
             query {
               Page(page: 1, perPage: 25) {
                 media(status: RELEASING, type: ANIME, sort: [POPULARITY_DESC]) {
-                  id
-                  title { romaji english }
-                  coverImage { extraLarge large medium }
-                  episodes
-                  status
-                  siteUrl
-                  nextAiringEpisode { airingAt timeUntilAiring episode }
+                  $mediaFields
                 }
               }
             }
@@ -103,13 +107,35 @@ class AniListApiService {
             query {
               Page(page: 1, perPage: 25) {
                 media(type: ANIME, sort: [TRENDING_DESC]) {
-                  id
-                  title { romaji english }
-                  coverImage { extraLarge large medium }
-                  episodes
-                  status
-                  siteUrl
-                  nextAiringEpisode { airingAt timeUntilAiring episode }
+                  $mediaFields
+                }
+              }
+            }
+        """.trimIndent()
+
+        val requestBody = buildJsonObject {
+            put("query", query)
+        }
+
+        return try {
+            val response: AniListResponse<PageData> = client.post(apiUrl) {
+                contentType(ContentType.Application.Json)
+                setBody(requestBody)
+            }.body()
+
+            response.data?.Page?.media ?: emptyList()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    suspend fun getTopAiring(): List<AniListMedia> {
+        val query = """
+            query {
+              Page(page: 1, perPage: 25) {
+                media(status: RELEASING, type: ANIME, sort: [SCORE_DESC]) {
+                  $mediaFields
                 }
               }
             }
@@ -136,13 +162,7 @@ class AniListApiService {
         val query = """
             query (${'$'}id: Int) {
               Media(id: ${'$'}id, type: ANIME) {
-                id
-                title { romaji english }
-                coverImage { extraLarge large medium }
-                episodes
-                status
-                siteUrl
-                nextAiringEpisode { airingAt timeUntilAiring episode }
+                $mediaFields
               }
             }
         """.trimIndent()

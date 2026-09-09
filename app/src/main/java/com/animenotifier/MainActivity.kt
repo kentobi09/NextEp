@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -23,8 +24,7 @@ import com.animenotifier.ui.components.PermissionHandler
 import com.animenotifier.ui.screens.HomeScreen
 import com.animenotifier.ui.screens.ScheduleScreen
 import com.animenotifier.ui.screens.SearchScreen
-import com.animenotifier.ui.theme.AnimeNotifierTheme
-import com.animenotifier.ui.theme.ElectricIndigo
+import com.animenotifier.ui.theme.*
 
 enum class NavScreen(val label: String, val icon: ImageVector) {
     WATCHLIST("Watchlist", Icons.Default.Home),
@@ -48,8 +48,9 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     bottomBar = {
                         NavigationBar(
-                            containerColor = MaterialTheme.colorScheme.surface,
-                            tonalElevation = 8.dp
+                            containerColor = SurfaceRoot,
+                            tonalElevation = 0.dp,
+                            modifier = Modifier.border(width = 1.dp, color = SurfaceBorder)
                         ) {
                             NavScreen.values().forEach { screen ->
                                 val isSelected = (currentScreen == screen)
@@ -60,22 +61,23 @@ class MainActivity : ComponentActivity() {
                                         Icon(
                                             imageVector = screen.icon,
                                             contentDescription = screen.label,
-                                            modifier = Modifier.size(22.dp)
+                                            modifier = Modifier.size(20.dp)
                                         )
                                     },
                                     label = {
                                         Text(
-                                            text = screen.label,
-                                            fontSize = 12.sp,
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                            text = screen.label.uppercase(),
+                                            fontSize = 9.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            letterSpacing = 1.sp
                                         )
                                     },
                                     colors = NavigationBarItemDefaults.colors(
-                                        selectedIconColor = ElectricIndigo,
-                                        selectedTextColor = ElectricIndigo,
-                                        indicatorColor = ElectricIndigo.copy(alpha = 0.15f),
-                                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                        selectedIconColor = AccentPrimary,
+                                        selectedTextColor = AccentPrimary,
+                                        indicatorColor = SurfaceElevated,
+                                        unselectedIconColor = TextSecondary,
+                                        unselectedTextColor = TextSecondary
                                     )
                                 )
                             }
@@ -86,7 +88,7 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(innerPadding),
-                        color = MaterialTheme.colorScheme.background
+                        color = SurfaceRoot
                     ) {
                         when (currentScreen) {
                             NavScreen.WATCHLIST -> HomeScreen(

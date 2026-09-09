@@ -34,6 +34,14 @@ class AnimeRepository(
         return apiService.getTrendingThisSeason()
     }
 
+    suspend fun getTopAiring(): List<AniListMedia> {
+        return apiService.getTopAiring()
+    }
+
+    suspend fun getAnimeById(id: Int): AniListMedia? {
+        return apiService.getAnimeById(id)
+    }
+
     suspend fun saveAnime(media: AniListMedia) {
         val nextEp = media.nextAiringEpisode
         val dayOfWeek = nextEp?.airingAt?.let { calculateDayOfWeek(it) }
@@ -42,6 +50,10 @@ class AnimeRepository(
             id = media.id,
             title = media.displayTitle(),
             coverImage = media.bestCoverImage(),
+            bannerImage = media.bannerImage,
+            synopsis = media.cleanDescription(),
+            studio = media.primaryStudio(),
+            durationMinutes = media.duration,
             watchedEpisodes = 0,
             totalEpisodes = media.episodes,
             nextEpisodeNumber = nextEp?.episode,
@@ -86,6 +98,10 @@ class AnimeRepository(
             val newEntity = anime.copy(
                 title = updated.displayTitle(),
                 coverImage = updated.bestCoverImage(),
+                bannerImage = updated.bannerImage ?: anime.bannerImage,
+                synopsis = updated.cleanDescription(),
+                studio = updated.primaryStudio() ?: anime.studio,
+                durationMinutes = updated.duration ?: anime.durationMinutes,
                 totalEpisodes = updated.episodes ?: anime.totalEpisodes,
                 nextEpisodeNumber = nextEp?.episode ?: anime.nextEpisodeNumber,
                 nextEpisodeAiringAt = nextEp?.airingAt ?: anime.nextEpisodeAiringAt,
@@ -123,7 +139,6 @@ class AnimeRepository(
             timeInMillis = timestampSeconds * 1000L
         }
         val calDay = calendar.get(Calendar.DAY_OF_WEEK)
-        // Convert Calendar.DAY_OF_WEEK (Sun=1, Mon=2..Sat=7) to 1=Mon..7=Sun
         return when (calDay) {
             Calendar.MONDAY -> 1
             Calendar.TUESDAY -> 2
