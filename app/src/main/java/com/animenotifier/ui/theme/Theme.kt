@@ -1,6 +1,8 @@
 package com.animenotifier.ui.theme
 
 import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -43,6 +45,15 @@ private val LightColorScheme = lightColorScheme(
     outline = LightSurfaceBorder
 )
 
+fun Context.findActivity(): Activity? {
+    var ctx = this
+    while (ctx is ContextWrapper) {
+        if (ctx is Activity) return ctx
+        ctx = ctx.baseContext
+    }
+    return null
+}
+
 @Composable
 fun AnimeNotifierTheme(
     darkTheme: Boolean = true, // Default to true dark theme
@@ -53,11 +64,13 @@ fun AnimeNotifierTheme(
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
-            val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.background.toArgb()
-            window.navigationBarColor = colorScheme.background.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
-            WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = !darkTheme
+            val activity = view.context.findActivity()
+            activity?.window?.let { window ->
+                window.statusBarColor = colorScheme.background.toArgb()
+                window.navigationBarColor = colorScheme.background.toArgb()
+                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+                WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = !darkTheme
+            }
         }
     }
 

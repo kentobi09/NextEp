@@ -1,42 +1,30 @@
 package com.animenotifier.data.remote
 
 import android.util.Log
-import io.ktor.client.*
-import io.ktor.client.call.*
-import io.ktor.client.engine.android.*
-import io.ktor.client.plugins.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.request.*
-import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import java.net.URLEncoder
+import java.util.concurrent.TimeUnit
 
 class AniListApiService {
 
     private val TAG = "AniListApiService"
 
-    private val client = HttpClient(Android) {
-        install(ContentNegotiation) {
-            json(Json {
-                ignoreUnknownKeys = true
-                isLenient = true
-                encodeDefaults = true
-            })
-        }
-        install(HttpTimeout) {
-            requestTimeoutMillis = 12000
-            connectTimeoutMillis = 10000
-            socketTimeoutMillis = 12000
-        }
-        defaultRequest {
-            header(
-                HttpHeaders.UserAgent,
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-            )
-            header("Origin", "https://anilist.co")
-            header("Referer", "https://anilist.co/")
-            header(HttpHeaders.Accept, "application/json")
-        }
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(12, TimeUnit.SECONDS)
+        .readTimeout(15, TimeUnit.SECONDS)
+        .writeTimeout(15, TimeUnit.SECONDS)
+        .build()
+
+    private val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+        encodeDefaults = true
     }
 
     private val anilistUrl = "https://graphql.anilist.co"
@@ -60,7 +48,7 @@ class AniListApiService {
         nextAiringEpisode { airingAt timeUntilAiring episode }
     """.trimIndent()
 
-    suspend fun searchAnime(searchQuery: String?, genre: String? = null): List<AniListMedia> {
+    suspend fun searchAnime(searchQuery: String?, genre: String? = null): List<AniListMedia> = withContext(Dispatchers.IO) {
         val query = """
             query (${'$'}search: String, ${'$'}genre: String) {
               Page(page: 1, perPage: 25) {
@@ -80,30 +68,42 @@ class AniListApiService {
             }
         }
 
-        val requestBody = buildJsonObject {
+        val requestPayload = buildJsonObject {
             put("query", query)
             put("variables", variables)
-        }
+        }.toString()
 
-        return try {
-            val response: AniListResponse<PageData> = client.post(anilistUrl) {
-                contentType(ContentType.Application.Json)
-                setBody(requestBody)
-            }.body()
+        try {
+            val request = Request.Builder()
+                .url(anilistUrl)
+                .post(requestPayload.toRequestBody("application/json".toMediaType()))
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Accept", "application/json")
+                .addHeader("Origin", "https://anilist.co")
+                .addHeader("Referer", "https://anilist.co/")
+                .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                .build()
 
-            val results = response.data?.Page?.media
-            if (!results.isNullOrEmpty()) {
-                results
-            } else {
-                fallbackKitsuSearch(searchQuery, genre)
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val body = response.body?.string()
+                    if (!body.isNullOrBlank()) {
+                        val parsed = json.decodeFromString<AniListResponse<PageData>>(body)
+                        val media = parsed.data?.Page?.media
+                        if (!media.isNullOrEmpty()) {
+                            return@withContext media
+                        }
+                    }
+                }
             }
+            fallbackKitsuSearch(searchQuery, genre)
         } catch (e: Exception) {
-            Log.e(TAG, "AniList search failed, attempting Kitsu fallback", e)
+            Log.e(TAG, "AniList search failed, using Kitsu fallback", e)
             fallbackKitsuSearch(searchQuery, genre)
         }
     }
 
-    suspend fun getAiringToday(): List<AniListMedia> {
+    suspend fun getAiringToday(): List<AniListMedia> = withContext(Dispatchers.IO) {
         val query = """
             query {
               Page(page: 1, perPage: 25) {
@@ -114,29 +114,41 @@ class AniListApiService {
             }
         """.trimIndent()
 
-        val requestBody = buildJsonObject {
+        val requestPayload = buildJsonObject {
             put("query", query)
-        }
+        }.toString()
 
-        return try {
-            val response: AniListResponse<PageData> = client.post(anilistUrl) {
-                contentType(ContentType.Application.Json)
-                setBody(requestBody)
-            }.body()
+        try {
+            val request = Request.Builder()
+                .url(anilistUrl)
+                .post(requestPayload.toRequestBody("application/json".toMediaType()))
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Accept", "application/json")
+                .addHeader("Origin", "https://anilist.co")
+                .addHeader("Referer", "https://anilist.co/")
+                .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                .build()
 
-            val results = response.data?.Page?.media
-            if (!results.isNullOrEmpty()) {
-                results
-            } else {
-                fallbackKitsuAiringToday()
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val body = response.body?.string()
+                    if (!body.isNullOrBlank()) {
+                        val parsed = json.decodeFromString<AniListResponse<PageData>>(body)
+                        val media = parsed.data?.Page?.media
+                        if (!media.isNullOrEmpty()) {
+                            return@withContext media
+                        }
+                    }
+                }
             }
+            fallbackKitsuAiringToday()
         } catch (e: Exception) {
-            Log.e(TAG, "AniList getAiringToday failed, attempting Kitsu fallback", e)
+            Log.e(TAG, "AniList getAiringToday failed, using Kitsu fallback", e)
             fallbackKitsuAiringToday()
         }
     }
 
-    suspend fun getTrendingThisSeason(): List<AniListMedia> {
+    suspend fun getTrendingThisSeason(): List<AniListMedia> = withContext(Dispatchers.IO) {
         val query = """
             query {
               Page(page: 1, perPage: 25) {
@@ -147,29 +159,41 @@ class AniListApiService {
             }
         """.trimIndent()
 
-        val requestBody = buildJsonObject {
+        val requestPayload = buildJsonObject {
             put("query", query)
-        }
+        }.toString()
 
-        return try {
-            val response: AniListResponse<PageData> = client.post(anilistUrl) {
-                contentType(ContentType.Application.Json)
-                setBody(requestBody)
-            }.body()
+        try {
+            val request = Request.Builder()
+                .url(anilistUrl)
+                .post(requestPayload.toRequestBody("application/json".toMediaType()))
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Accept", "application/json")
+                .addHeader("Origin", "https://anilist.co")
+                .addHeader("Referer", "https://anilist.co/")
+                .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                .build()
 
-            val results = response.data?.Page?.media
-            if (!results.isNullOrEmpty()) {
-                results
-            } else {
-                fallbackKitsuTrending()
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val body = response.body?.string()
+                    if (!body.isNullOrBlank()) {
+                        val parsed = json.decodeFromString<AniListResponse<PageData>>(body)
+                        val media = parsed.data?.Page?.media
+                        if (!media.isNullOrEmpty()) {
+                            return@withContext media
+                        }
+                    }
+                }
             }
+            fallbackKitsuTrending()
         } catch (e: Exception) {
-            Log.e(TAG, "AniList getTrendingThisSeason failed, attempting Kitsu fallback", e)
+            Log.e(TAG, "AniList getTrendingThisSeason failed, using Kitsu fallback", e)
             fallbackKitsuTrending()
         }
     }
 
-    suspend fun getTopAiring(): List<AniListMedia> {
+    suspend fun getTopAiring(): List<AniListMedia> = withContext(Dispatchers.IO) {
         val query = """
             query {
               Page(page: 1, perPage: 25) {
@@ -180,29 +204,41 @@ class AniListApiService {
             }
         """.trimIndent()
 
-        val requestBody = buildJsonObject {
+        val requestPayload = buildJsonObject {
             put("query", query)
-        }
+        }.toString()
 
-        return try {
-            val response: AniListResponse<PageData> = client.post(anilistUrl) {
-                contentType(ContentType.Application.Json)
-                setBody(requestBody)
-            }.body()
+        try {
+            val request = Request.Builder()
+                .url(anilistUrl)
+                .post(requestPayload.toRequestBody("application/json".toMediaType()))
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Accept", "application/json")
+                .addHeader("Origin", "https://anilist.co")
+                .addHeader("Referer", "https://anilist.co/")
+                .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                .build()
 
-            val results = response.data?.Page?.media
-            if (!results.isNullOrEmpty()) {
-                results
-            } else {
-                fallbackKitsuAiringToday()
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val body = response.body?.string()
+                    if (!body.isNullOrBlank()) {
+                        val parsed = json.decodeFromString<AniListResponse<PageData>>(body)
+                        val media = parsed.data?.Page?.media
+                        if (!media.isNullOrEmpty()) {
+                            return@withContext media
+                        }
+                    }
+                }
             }
+            fallbackKitsuAiringToday()
         } catch (e: Exception) {
-            Log.e(TAG, "AniList getTopAiring failed, attempting Kitsu fallback", e)
+            Log.e(TAG, "AniList getTopAiring failed, using Kitsu fallback", e)
             fallbackKitsuAiringToday()
         }
     }
 
-    suspend fun getAnimeById(id: Int): AniListMedia? {
+    suspend fun getAnimeById(id: Int): AniListMedia? = withContext(Dispatchers.IO) {
         val query = """
             query (${'$'}id: Int) {
               Media(id: ${'$'}id, type: ANIME) {
@@ -215,18 +251,32 @@ class AniListApiService {
             put("id", id)
         }
 
-        val requestBody = buildJsonObject {
+        val requestPayload = buildJsonObject {
             put("query", query)
             put("variables", variables)
-        }
+        }.toString()
 
-        return try {
-            val response: AniListResponse<MediaData> = client.post(anilistUrl) {
-                contentType(ContentType.Application.Json)
-                setBody(requestBody)
-            }.body()
+        try {
+            val request = Request.Builder()
+                .url(anilistUrl)
+                .post(requestPayload.toRequestBody("application/json".toMediaType()))
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Accept", "application/json")
+                .addHeader("Origin", "https://anilist.co")
+                .addHeader("Referer", "https://anilist.co/")
+                .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                .build()
 
-            response.data?.Media
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val body = response.body?.string()
+                    if (!body.isNullOrBlank()) {
+                        val parsed = json.decodeFromString<AniListResponse<MediaData>>(body)
+                        return@withContext parsed.data?.Media
+                    }
+                }
+            }
+            null
         } catch (e: Exception) {
             Log.e(TAG, "AniList getAnimeById failed", e)
             null
@@ -235,51 +285,75 @@ class AniListApiService {
 
     // --- Resilient Fallback Helpers using Kitsu API ---
 
-    private suspend fun fallbackKitsuSearch(searchQuery: String?, genre: String?): List<AniListMedia> {
+    private fun fallbackKitsuSearch(searchQuery: String?, genre: String?): List<AniListMedia> {
         return try {
             val queryParams = mutableListOf<String>()
             if (!searchQuery.isNullOrBlank()) {
-                queryParams.add("filter[text]=${searchQuery.encodeURLQueryComponent()}")
+                queryParams.add("filter[text]=${URLEncoder.encode(searchQuery, "UTF-8")}")
             }
             if (!genre.isNullOrBlank()) {
-                queryParams.add("filter[categories]=${genre.lowercase().encodeURLQueryComponent()}")
+                queryParams.add("filter[categories]=${URLEncoder.encode(genre.lowercase(), "UTF-8")}")
             }
             queryParams.add("page[limit]=20")
 
             val url = "$kitsuBaseUrl/anime?${queryParams.joinToString("&")}"
-            val responseString: String = client.get(url) {
-                header(HttpHeaders.Accept, "application/vnd.api+json")
-            }.body()
+            val request = Request.Builder()
+                .url(url)
+                .get()
+                .addHeader("Accept", "application/vnd.api+json")
+                .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+                .build()
 
-            parseKitsuResponse(responseString)
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string()
+                if (!body.isNullOrBlank()) {
+                    parseKitsuResponse(body)
+                } else emptyList()
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Kitsu search fallback failed", e)
             emptyList()
         }
     }
 
-    private suspend fun fallbackKitsuTrending(): List<AniListMedia> {
+    private fun fallbackKitsuTrending(): List<AniListMedia> {
         return try {
             val url = "$kitsuBaseUrl/trending/anime?limit=20"
-            val responseString: String = client.get(url) {
-                header(HttpHeaders.Accept, "application/vnd.api+json")
-            }.body()
+            val request = Request.Builder()
+                .url(url)
+                .get()
+                .addHeader("Accept", "application/vnd.api+json")
+                .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+                .build()
 
-            parseKitsuResponse(responseString)
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string()
+                if (!body.isNullOrBlank()) {
+                    parseKitsuResponse(body)
+                } else emptyList()
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Kitsu trending fallback failed", e)
             emptyList()
         }
     }
 
-    private suspend fun fallbackKitsuAiringToday(): List<AniListMedia> {
+    private fun fallbackKitsuAiringToday(): List<AniListMedia> {
         return try {
             val url = "$kitsuBaseUrl/anime?filter[status]=current&sort=-userCount&page[limit]=20"
-            val responseString: String = client.get(url) {
-                header(HttpHeaders.Accept, "application/vnd.api+json")
-            }.body()
+            val request = Request.Builder()
+                .url(url)
+                .get()
+                .addHeader("Accept", "application/vnd.api+json")
+                .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+                .build()
 
-            parseKitsuResponse(responseString)
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string()
+                if (!body.isNullOrBlank()) {
+                    parseKitsuResponse(body)
+                } else emptyList()
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Kitsu airing fallback failed", e)
             emptyList()
@@ -288,7 +362,6 @@ class AniListApiService {
 
     private fun parseKitsuResponse(jsonString: String): List<AniListMedia> {
         return try {
-            val json = Json { ignoreUnknownKeys = true }
             val root = json.parseToJsonElement(jsonString).jsonObject
             val dataArray = root["data"]?.jsonArray ?: return emptyList()
 

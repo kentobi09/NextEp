@@ -125,21 +125,25 @@ class AnimeRepository(
     }
 
     fun setupBackgroundWorker() {
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
+        try {
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+
+            val periodicWorkRequest = PeriodicWorkRequestBuilder<ScheduleUpdateWorker>(
+                12, TimeUnit.HOURS
+            )
+            .setConstraints(constraints)
             .build()
 
-        val periodicWorkRequest = PeriodicWorkRequestBuilder<ScheduleUpdateWorker>(
-            12, TimeUnit.HOURS
-        )
-        .setConstraints(constraints)
-        .build()
-
-        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-            "ScheduleUpdateWorker",
-            ExistingPeriodicWorkPolicy.KEEP,
-            periodicWorkRequest
-        )
+            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+                "ScheduleUpdateWorker",
+                ExistingPeriodicWorkPolicy.KEEP,
+                periodicWorkRequest
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     private fun calculateDayOfWeek(timestampSeconds: Long): Int {

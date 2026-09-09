@@ -80,8 +80,9 @@ dependencies {
     implementation("io.ktor:ktor-client-logging:$ktorVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
 
-    // Coil Image Loading
+    // Coil Image Loading & OkHttp
     implementation("io.coil-kt:coil-compose:2.5.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     // WorkManager
     implementation("androidx.work:work-runtime-ktx:2.9.0")
