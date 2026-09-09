@@ -52,17 +52,19 @@ class AniListApiService {
         duration
         status
         siteUrl
+        genres
+        averageScore
         studios(isMain: true) {
           nodes { name isAnimationStudio }
         }
         nextAiringEpisode { airingAt timeUntilAiring episode }
     """.trimIndent()
 
-    suspend fun searchAnime(searchQuery: String): List<AniListMedia> {
+    suspend fun searchAnime(searchQuery: String?, genre: String? = null): List<AniListMedia> {
         val query = """
-            query (${'$'}search: String) {
+            query (${'$'}search: String, ${'$'}genre: String) {
               Page(page: 1, perPage: 25) {
-                media(search: ${'$'}search, type: ANIME, sort: [POPULARITY_DESC]) {
+                media(search: ${'$'}search, genre: ${'$'}genre, type: ANIME, sort: [POPULARITY_DESC]) {
                   $mediaFields
                 }
               }
@@ -70,7 +72,12 @@ class AniListApiService {
         """.trimIndent()
 
         val variables = buildJsonObject {
-            put("search", searchQuery)
+            if (!searchQuery.isNullOrBlank()) {
+                put("search", searchQuery)
+            }
+            if (!genre.isNullOrBlank()) {
+                put("genre", genre)
+            }
         }
 
         val requestBody = buildJsonObject {
@@ -88,11 +95,11 @@ class AniListApiService {
             if (!results.isNullOrEmpty()) {
                 results
             } else {
-                fallbackKitsuSearch(searchQuery)
+                fallbackKitsuSearch(searchQuery, genre)
             }
         } catch (e: Exception) {
             Log.e(TAG, "AniList search failed, attempting Kitsu fallback", e)
-            fallbackKitsuSearch(searchQuery)
+            fallbackKitsuSearch(searchQuery, genre)
         }
     }
 
@@ -228,10 +235,18 @@ class AniListApiService {
 
     // --- Resilient Fallback Helpers using Kitsu API ---
 
-    private suspend fun fallbackKitsuSearch(searchQuery: String): List<AniListMedia> {
+    private suspend fun fallbackKitsuSearch(searchQuery: String?, genre: String?): List<AniListMedia> {
         return try {
-            val encodedQuery = searchQuery.encodeURLQueryComponent()
-            val url = "$kitsuBaseUrl/anime?filter[text]=$encodedQuery&page[limit]=20"
+            val queryParams = mutableListOf<String>()
+            if (!searchQuery.isNullOrBlank()) {
+                queryParams.add("filter[text]=${searchQuery.encodeURLQueryComponent()}")
+            }
+            if (!genre.isNullOrBlank()) {
+                queryParams.add("filter[categories]=${genre.lowercase().encodeURLQueryComponent()}")
+            }
+            queryParams.add("page[limit]=20")
+
+            val url = "$kitsuBaseUrl/anime?${queryParams.joinToString("&")}"
             val responseString: String = client.get(url) {
                 header(HttpHeaders.Accept, "application/vnd.api+json")
             }.body()
@@ -303,6 +318,7 @@ class AniListApiService {
                 val episodeCount = attrs["episodeCount"]?.jsonPrimitive?.intOrNull
                 val episodeLength = attrs["episodeLength"]?.jsonPrimitive?.intOrNull
                 val status = attrs["status"]?.jsonPrimitive?.content?.uppercase()
+                val score = attrs["averageRating"]?.jsonPrimitive?.content?.toDoubleOrNull()?.toInt()
 
                 AniListMedia(
                     id = id,
@@ -314,9 +330,10 @@ class AniListApiService {
                     duration = episodeLength,
                     status = status ?: "RELEASING",
                     siteUrl = "https://kitsu.io/anime/$idStr",
+                    genres = emptyList(),
+                    averageScore = score,
                     studios = null,
                     nextAiringEpisode = if (status == "CURRENT") {
-                        // Generate weekly schedule estimate (e.g. 3 days from now)
                         val now = System.currentTimeMillis() / 1000L
                         AiringEpisode(airingAt = now + 86400 * 2, timeUntilAiring = 86400 * 2, episode = (episodeCount ?: 12))
                     } else null

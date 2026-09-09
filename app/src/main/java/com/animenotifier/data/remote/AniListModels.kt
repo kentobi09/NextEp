@@ -51,6 +51,8 @@ data class AniListMedia(
     val status: String? = null,
     val siteUrl: String? = null,
     val studios: StudioConnection? = null,
+    val genres: List<String> = emptyList(),
+    val averageScore: Int? = null,
     val nextAiringEpisode: AiringEpisode? = null
 ) {
     fun displayTitle(): String {

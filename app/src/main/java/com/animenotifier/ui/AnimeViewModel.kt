@@ -9,6 +9,8 @@ import com.animenotifier.data.notification.AlarmScheduler
 import com.animenotifier.data.remote.AniListApiService
 import com.animenotifier.data.remote.AniListMedia
 import com.animenotifier.data.repository.AnimeRepository
+import com.animenotifier.ui.screens.AnimeDetailModel
+import com.animenotifier.ui.screens.toDetailModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -48,6 +50,9 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
+    private val _selectedGenre = MutableStateFlow<String?>(null)
+    val selectedGenre: StateFlow<String?> = _selectedGenre.asStateFlow()
+
     private val _searchResults = MutableStateFlow<List<AniListMedia>>(emptyList())
     val searchResults: StateFlow<List<AniListMedia>> = _searchResults.asStateFlow()
 
@@ -63,8 +68,9 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedScheduleDay = MutableStateFlow(currentDayOfWeek())
     val selectedScheduleDay: StateFlow<Int> = _selectedScheduleDay.asStateFlow()
 
-    private val _selectedAnimeDetail = MutableStateFlow<AnimeEntity?>(null)
-    val selectedAnimeDetail: StateFlow<AnimeEntity?> = _selectedAnimeDetail.asStateFlow()
+    // Full-screen Anime Detail Screen State
+    private val _activeDetail = MutableStateFlow<AnimeDetailModel?>(null)
+    val activeDetail: StateFlow<AnimeDetailModel?> = _activeDetail.asStateFlow()
 
     private var searchJob: Job? = null
 
@@ -75,20 +81,24 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onSearchQueryChanged(query: String) {
         _searchQuery.value = query
-        if (query.isNotBlank()) {
-            _activeChip.value = DiscoveryChip.SEARCH
-            searchJob?.cancel()
-            searchJob = viewModelScope.launch {
-                delay(300) // 300ms debounce
-                _isSearching.value = true
-                val results = repository.searchAnime(query)
-                _searchResults.value = results
-                _isSearching.value = false
-            }
-        } else {
-            if (_activeChip.value == DiscoveryChip.SEARCH) {
-                onChipSelected(DiscoveryChip.TRENDING)
-            }
+        _activeChip.value = DiscoveryChip.SEARCH
+        executeSearch(query, _selectedGenre.value)
+    }
+
+    fun onGenreSelected(genre: String?) {
+        _selectedGenre.value = if (_selectedGenre.value == genre) null else genre
+        _activeChip.value = DiscoveryChip.SEARCH
+        executeSearch(_searchQuery.value, _selectedGenre.value)
+    }
+
+    private fun executeSearch(query: String?, genre: String?) {
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
+            delay(300) // 300ms debounce
+            _isSearching.value = true
+            val results = repository.searchAnime(query, genre)
+            _searchResults.value = results
+            _isSearching.value = false
         }
     }
 
@@ -96,6 +106,7 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
         _activeChip.value = chip
         if (chip != DiscoveryChip.SEARCH) {
             _searchQuery.value = ""
+            _selectedGenre.value = null
         }
         loadDiscoveryData(chip)
     }
@@ -112,6 +123,18 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
             _searchResults.value = results
             _isSearching.value = false
         }
+    }
+
+    fun openAnimeDetail(media: AniListMedia) {
+        _activeDetail.value = media.toDetailModel()
+    }
+
+    fun openAnimeDetailFromEntity(entity: AnimeEntity) {
+        _activeDetail.value = entity.toDetailModel()
+    }
+
+    fun closeAnimeDetail() {
+        _activeDetail.value = null
     }
 
     fun toggleSaveAnime(media: AniListMedia) {
@@ -141,10 +164,6 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             repository.updateNotificationSettings(animeId, enabled, leadTimeMinutes)
         }
-    }
-
-    fun selectAnimeForDetail(anime: AnimeEntity?) {
-        _selectedAnimeDetail.value = anime
     }
 
     fun refreshSchedules() {

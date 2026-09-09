@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -33,6 +34,22 @@ import com.animenotifier.ui.AnimeViewModel
 import com.animenotifier.ui.DiscoveryChip
 import com.animenotifier.ui.theme.*
 
+val AnimeGenres = listOf(
+    "Action",
+    "Adventure",
+    "Comedy",
+    "Drama",
+    "Fantasy",
+    "Horror",
+    "Mystery",
+    "Romance",
+    "Sci-Fi",
+    "Slice of Life",
+    "Sports",
+    "Supernatural",
+    "Thriller"
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(viewModel: AnimeViewModel) {
@@ -40,6 +57,7 @@ fun SearchScreen(viewModel: AnimeViewModel) {
     val searchResults by viewModel.searchResults.collectAsState()
     val isSearching by viewModel.isSearching.collectAsState()
     val activeChip by viewModel.activeChip.collectAsState()
+    val selectedGenre by viewModel.selectedGenre.collectAsState()
     val watchlist by viewModel.savedAnimeList.collectAsState()
 
     val savedIds = remember(watchlist) { watchlist.map { it.id }.toSet() }
@@ -52,7 +70,7 @@ fun SearchScreen(viewModel: AnimeViewModel) {
                     .background(SurfaceRoot)
                     .padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 8.dp)
             ) {
-                // Clean icon-free text field
+                // Clean icon-free search bar
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { viewModel.onSearchQueryChanged(it) },
@@ -90,9 +108,9 @@ fun SearchScreen(viewModel: AnimeViewModel) {
                     shape = RoundedCornerShape(8.dp)
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
-                // Category Chips
+                // Discovery Category Chips
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -104,7 +122,7 @@ fun SearchScreen(viewModel: AnimeViewModel) {
 
                     items(chips.size) { index ->
                         val chip = chips[index]
-                        val isSelected = (activeChip == chip)
+                        val isSelected = (activeChip == chip && selectedGenre == null && searchQuery.isEmpty())
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
@@ -122,6 +140,37 @@ fun SearchScreen(viewModel: AnimeViewModel) {
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 1.1.sp,
+                                color = if (isSelected) TextPrimary else TextSecondary
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Genre Filter Chips Row
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    items(AnimeGenres) { genre ->
+                        val isSelected = (selectedGenre == genre)
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(if (isSelected) AccentPrimary.copy(alpha = 0.85f) else SurfaceElevatedHigh)
+                                .border(
+                                    1.dp,
+                                    if (isSelected) AccentPrimary else SurfaceBorder,
+                                    RoundedCornerShape(4.dp)
+                                )
+                                .clickable { viewModel.onGenreSelected(genre) }
+                                .padding(horizontal = 10.dp, vertical = 5.dp)
+                        ) {
+                            Text(
+                                text = genre.uppercase(),
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp,
                                 color = if (isSelected) TextPrimary else TextSecondary
                             )
                         }
@@ -150,7 +199,11 @@ fun SearchScreen(viewModel: AnimeViewModel) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (searchQuery.isNotBlank()) "No anime found." else "Explore popular releases above.",
+                        text = if (searchQuery.isNotBlank() || selectedGenre != null) {
+                            "No anime found matching criteria."
+                        } else {
+                            "Explore popular releases or filter by genre above."
+                        },
                         color = TextSecondary,
                         fontSize = 13.sp
                     )
@@ -168,6 +221,7 @@ fun SearchScreen(viewModel: AnimeViewModel) {
                         MinimalSearchResultCard(
                             media = media,
                             isSaved = isSaved,
+                            onClick = { viewModel.openAnimeDetail(media) },
                             onToggleSave = { viewModel.toggleSaveAnime(media) }
                         )
                     }
@@ -181,12 +235,15 @@ fun SearchScreen(viewModel: AnimeViewModel) {
 fun MinimalSearchResultCard(
     media: AniListMedia,
     isSaved: Boolean,
+    onClick: () -> Unit,
     onToggleSave: () -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
 
     Column(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
     ) {
         // 2:3 Aspect Ratio Portrait Card
         Box(
@@ -242,14 +299,20 @@ fun MinimalSearchResultCard(
 
         Spacer(modifier = Modifier.height(2.dp))
 
-        // Metadata micro-caps
-        val meta = media.nextAiringEpisode?.let { "EP ${it.episode}" } ?: (media.status ?: "FINISHED")
+        // Metadata micro-caps (genre or episode)
+        val meta = if (media.genres.isNotEmpty()) {
+            media.genres.take(2).joinToString(" • ")
+        } else {
+            media.nextAiringEpisode?.let { "EP ${it.episode}" } ?: (media.status ?: "FINISHED")
+        }
         Text(
             text = meta.uppercase(),
-            fontSize = 10.sp,
+            fontSize = 9.sp,
             fontWeight = FontWeight.Bold,
             letterSpacing = 1.sp,
-            color = TextSecondary
+            color = TextSecondary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }

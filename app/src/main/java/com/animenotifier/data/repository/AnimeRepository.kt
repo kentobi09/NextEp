@@ -21,9 +21,9 @@ class AnimeRepository(
 
     val savedAnimeList: Flow<List<AnimeEntity>> = dao.getAllSavedAnime()
 
-    suspend fun searchAnime(query: String): List<AniListMedia> {
-        if (query.isBlank()) return emptyList()
-        return apiService.searchAnime(query)
+    suspend fun searchAnime(query: String?, genre: String? = null): List<AniListMedia> {
+        if (query.isNullExOrBlank() && genre.isNullOrBlank()) return emptyList()
+        return apiService.searchAnime(query, genre)
     }
 
     suspend fun getAiringToday(): List<AniListMedia> {
@@ -42,6 +42,10 @@ class AnimeRepository(
         return apiService.getAnimeById(id)
     }
 
+    suspend fun getSavedAnimeById(id: Int): AnimeEntity? {
+        return dao.getAnimeById(id)
+    }
+
     suspend fun saveAnime(media: AniListMedia) {
         val nextEp = media.nextAiringEpisode
         val dayOfWeek = nextEp?.airingAt?.let { calculateDayOfWeek(it) }
@@ -54,6 +58,8 @@ class AnimeRepository(
             synopsis = media.cleanDescription(),
             studio = media.primaryStudio(),
             durationMinutes = media.duration,
+            genres = if (media.genres.isNotEmpty()) media.genres.joinToString(", ") else null,
+            averageScore = media.averageScore,
             watchedEpisodes = 0,
             totalEpisodes = media.episodes,
             nextEpisodeNumber = nextEp?.episode,
@@ -102,6 +108,8 @@ class AnimeRepository(
                 synopsis = updated.cleanDescription(),
                 studio = updated.primaryStudio() ?: anime.studio,
                 durationMinutes = updated.duration ?: anime.durationMinutes,
+                genres = if (updated.genres.isNotEmpty()) updated.genres.joinToString(", ") else anime.genres,
+                averageScore = updated.averageScore ?: anime.averageScore,
                 totalEpisodes = updated.episodes ?: anime.totalEpisodes,
                 nextEpisodeNumber = nextEp?.episode ?: anime.nextEpisodeNumber,
                 nextEpisodeAiringAt = nextEp?.airingAt ?: anime.nextEpisodeAiringAt,
@@ -150,4 +158,6 @@ class AnimeRepository(
             else -> 1
         }
     }
+
+    private fun String?.isNullExOrBlank(): Boolean = this == null || this.trim().isEmpty()
 }

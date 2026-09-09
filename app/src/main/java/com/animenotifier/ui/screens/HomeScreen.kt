@@ -107,6 +107,7 @@ fun HomeScreen(
                         item(key = "hero_banner") {
                             HeroAiringNextCard(
                                 anime = hero,
+                                onClick = { viewModel.openAnimeDetailFromEntity(hero) },
                                 onOpenSettings = { showSettingsForAnime = hero }
                             )
                         }
@@ -129,6 +130,7 @@ fun HomeScreen(
                         Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
                             MinimalAnimeWatchlistCard(
                                 anime = anime,
+                                onClick = { viewModel.openAnimeDetailFromEntity(anime) },
                                 onIncrementWatched = { viewModel.incrementWatched(anime.id) },
                                 onOpenSettings = { showSettingsForAnime = anime }
                             )
@@ -159,6 +161,7 @@ fun HomeScreen(
 @Composable
 fun HeroAiringNextCard(
     anime: AnimeEntity,
+    onClick: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
     var currentTimeMillis by remember { mutableStateOf(System.currentTimeMillis()) }
@@ -175,7 +178,8 @@ fun HeroAiringNextCard(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .clip(RoundedCornerShape(8.dp))
-            .border(1.dp, SurfaceBorder, RoundedCornerShape(8.dp)),
+            .border(1.dp, SurfaceBorder, RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = SurfaceElevated)
     ) {
         Box(
@@ -300,6 +304,7 @@ fun HeroAiringNextCard(
 @Composable
 fun MinimalAnimeWatchlistCard(
     anime: AnimeEntity,
+    onClick: () -> Unit,
     onIncrementWatched: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
@@ -317,7 +322,8 @@ fun MinimalAnimeWatchlistCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .border(1.dp, SurfaceBorder, RoundedCornerShape(8.dp)),
+            .border(1.dp, SurfaceBorder, RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = SurfaceElevated)
     ) {
         Row(

@@ -1,7 +1,5 @@
 package com.animenotifier.ui.screens
 
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -9,19 +7,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -39,7 +31,6 @@ import java.util.Locale
 fun ScheduleScreen(viewModel: AnimeViewModel) {
     val watchlist by viewModel.savedAnimeList.collectAsState()
     val selectedDay by viewModel.selectedScheduleDay.collectAsState()
-    val selectedAnimeDetail by viewModel.selectedAnimeDetail.collectAsState()
 
     val daysOfWeek = listOf(
         1 to "MON",
@@ -135,35 +126,11 @@ fun ScheduleScreen(viewModel: AnimeViewModel) {
                     items(filteredAnime, key = { it.id }) { anime ->
                         MinimalScheduleAnimeCard(
                             anime = anime,
-                            onClick = { viewModel.selectAnimeForDetail(anime) }
+                            onClick = { viewModel.openAnimeDetailFromEntity(anime) }
                         )
                     }
                 }
             }
-        }
-    }
-
-    // ModalBottomSheet for Anime Details
-    selectedAnimeDetail?.let { anime ->
-        ModalBottomSheet(
-            onDismissRequest = { viewModel.selectAnimeForDetail(null) },
-            containerColor = SurfaceElevated,
-            dragHandle = {
-                Box(
-                    modifier = Modifier
-                        .padding(vertical = 10.dp)
-                        .width(36.dp)
-                        .height(4.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(SurfaceBorder)
-                )
-            },
-            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
-        ) {
-            AnimeDetailSheetContent(
-                anime = anime,
-                onClose = { viewModel.selectAnimeForDetail(null) }
-            )
         }
     }
 }
@@ -252,137 +219,5 @@ fun MinimalScheduleAnimeCard(
                 }
             }
         }
-    }
-}
-
-@Composable
-fun AnimeDetailSheetContent(
-    anime: AnimeEntity,
-    onClose: () -> Unit
-) {
-    val context = LocalContext.current
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 8.dp)
-            .verticalScroll(rememberScrollState())
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End
-        ) {
-            IconButton(
-                onClick = onClose,
-                modifier = Modifier.size(24.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Close",
-                    tint = TextSecondary,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            AsyncImage(
-                model = anime.coverImage,
-                contentDescription = anime.title,
-                modifier = Modifier
-                    .width(84.dp)
-                    .height(126.dp)
-                    .clip(RoundedCornerShape(6.dp)),
-                contentScale = ContentScale.Crop
-            )
-
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    text = anime.title,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    color = TextPrimary
-                )
-
-                anime.studio?.let { studio ->
-                    Text(
-                        text = "STUDIO: ${studio.uppercase()}",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp,
-                        color = TextSecondary
-                    )
-                }
-
-                anime.durationMinutes?.let { mins ->
-                    Text(
-                        text = "RUNTIME: $mins MIN",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp,
-                        color = TextSecondary
-                    )
-                }
-
-                anime.status?.let { status ->
-                    Text(
-                        text = "STATUS: ${status.replace("_", " ").uppercase()}",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp,
-                        color = StatusLive
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = "SYNOPSIS",
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 1.4.sp,
-            color = TextSecondary
-        )
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        Text(
-            text = anime.synopsis ?: "No synopsis available.",
-            fontSize = 13.sp,
-            color = TextPrimary,
-            lineHeight = 20.sp
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        anime.siteUrl?.let { url ->
-            Button(
-                onClick = {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                    context.startActivity(intent)
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(6.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = AccentPrimary)
-            ) {
-                Text(
-                    text = "VIEW ON ANILIST",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.2.sp
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
     }
 }

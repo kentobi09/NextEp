@@ -12,6 +12,8 @@ data class AnimeEntity(
     val synopsis: String? = null,
     val studio: String? = null,
     val durationMinutes: Int? = null,
+    val genres: String? = null,
+    val averageScore: Int? = null,
     val watchedEpisodes: Int = 0,
     val totalEpisodes: Int? = null,
     val nextEpisodeNumber: Int? = null,

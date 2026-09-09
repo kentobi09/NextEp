@@ -34,9 +34,9 @@ public final class AnimeDatabase_Impl extends AnimeDatabase {
     final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(1) {
       @Override
       public void createAllTables(@NonNull final SupportSQLiteDatabase db) {
-        db.execSQL("CREATE TABLE IF NOT EXISTS `saved_anime` (`id` INTEGER NOT NULL, `title` TEXT NOT NULL, `coverImage` TEXT NOT NULL, `bannerImage` TEXT, `synopsis` TEXT, `studio` TEXT, `durationMinutes` INTEGER, `watchedEpisodes` INTEGER NOT NULL, `totalEpisodes` INTEGER, `nextEpisodeNumber` INTEGER, `nextEpisodeAiringAt` INTEGER, `airingDayOfWeek` INTEGER, `status` TEXT, `siteUrl` TEXT, `notificationsEnabled` INTEGER NOT NULL, `alertLeadTimeMinutes` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))");
+        db.execSQL("CREATE TABLE IF NOT EXISTS `saved_anime` (`id` INTEGER NOT NULL, `title` TEXT NOT NULL, `coverImage` TEXT NOT NULL, `bannerImage` TEXT, `synopsis` TEXT, `studio` TEXT, `durationMinutes` INTEGER, `genres` TEXT, `averageScore` INTEGER, `watchedEpisodes` INTEGER NOT NULL, `totalEpisodes` INTEGER, `nextEpisodeNumber` INTEGER, `nextEpisodeAiringAt` INTEGER, `airingDayOfWeek` INTEGER, `status` TEXT, `siteUrl` TEXT, `notificationsEnabled` INTEGER NOT NULL, `alertLeadTimeMinutes` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))");
         db.execSQL("CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)");
-        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '16aee5f392c7455efc55f74aff6fffb6')");
+        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '767b4b2ae74d5e74ede85a798b67e37e')");
       }
 
       @Override
@@ -85,7 +85,7 @@ public final class AnimeDatabase_Impl extends AnimeDatabase {
       @NonNull
       public RoomOpenHelper.ValidationResult onValidateSchema(
           @NonNull final SupportSQLiteDatabase db) {
-        final HashMap<String, TableInfo.Column> _columnsSavedAnime = new HashMap<String, TableInfo.Column>(17);
+        final HashMap<String, TableInfo.Column> _columnsSavedAnime = new HashMap<String, TableInfo.Column>(19);
         _columnsSavedAnime.put("id", new TableInfo.Column("id", "INTEGER", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsSavedAnime.put("title", new TableInfo.Column("title", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsSavedAnime.put("coverImage", new TableInfo.Column("coverImage", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
@@ -93,6 +93,8 @@ public final class AnimeDatabase_Impl extends AnimeDatabase {
         _columnsSavedAnime.put("synopsis", new TableInfo.Column("synopsis", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsSavedAnime.put("studio", new TableInfo.Column("studio", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsSavedAnime.put("durationMinutes", new TableInfo.Column("durationMinutes", "INTEGER", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsSavedAnime.put("genres", new TableInfo.Column("genres", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsSavedAnime.put("averageScore", new TableInfo.Column("averageScore", "INTEGER", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsSavedAnime.put("watchedEpisodes", new TableInfo.Column("watchedEpisodes", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsSavedAnime.put("totalEpisodes", new TableInfo.Column("totalEpisodes", "INTEGER", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsSavedAnime.put("nextEpisodeNumber", new TableInfo.Column("nextEpisodeNumber", "INTEGER", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
@@ -114,7 +116,7 @@ public final class AnimeDatabase_Impl extends AnimeDatabase {
         }
         return new RoomOpenHelper.ValidationResult(true, null);
       }
-    }, "16aee5f392c7455efc55f74aff6fffb6", "16f96231c331ecd3bd3ccc5dc01abf8c");
+    }, "767b4b2ae74d5e74ede85a798b67e37e", "1f29817a3d0da571b2ce8390a45b1fc2");
     final SupportSQLiteOpenHelper.Configuration _sqliteConfig = SupportSQLiteOpenHelper.Configuration.builder(config.context).name(config.name).callback(_openCallback).build();
     final SupportSQLiteOpenHelper _helper = config.sqliteOpenHelperFactory.create(_sqliteConfig);
     return _helper;
