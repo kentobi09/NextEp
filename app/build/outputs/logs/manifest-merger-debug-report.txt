@@ -1,9 +1,9 @@
 -- Merging decision tree log ---
 manifest
-ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:2:1-55:12
-INJECTED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:2:1-55:12
-INJECTED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:2:1-55:12
-INJECTED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:2:1-55:12
+ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:2:1-56:12
+INJECTED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:2:1-56:12
+INJECTED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:2:1-56:12
+INJECTED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:2:1-56:12
 MERGED from [androidx.work:work-runtime-ktx:2.9.0] C:\Users\LENOVO\.gradle\caches\9.0-milestone-1\transforms\73a61b9d8b2faed2f6eabf90efef6be4\transformed\work-runtime-ktx-2.9.0\AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.work:work-runtime:2.9.0] C:\Users\LENOVO\.gradle\caches\9.0-milestone-1\transforms\7574accc52dfce2dea6adf4acc239b9a\transformed\work-runtime-2.9.0\AndroidManifest.xml:17:1-145:12
 MERGED from [androidx.compose.material3:material3-android:1.2.0] C:\Users\LENOVO\.gradle\caches\9.0-milestone-1\transforms\5eb5f6873186708f47cd65db1ff5599b\transformed\material3-release\AndroidManifest.xml:17:1-22:12
@@ -108,8 +108,8 @@ MERGED from [androidx.work:work-runtime:2.9.0] C:\Users\LENOVO\.gradle\caches\9.
 	android:name
 		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:13:22-78
 application
-ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:15:5-53:19
-INJECTED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:15:5-53:19
+ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:15:5-54:19
+INJECTED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:15:5-54:19
 MERGED from [androidx.work:work-runtime:2.9.0] C:\Users\LENOVO\.gradle\caches\9.0-milestone-1\transforms\7574accc52dfce2dea6adf4acc239b9a\transformed\work-runtime-2.9.0\AndroidManifest.xml:28:5-143:19
 MERGED from [androidx.work:work-runtime:2.9.0] C:\Users\LENOVO\.gradle\caches\9.0-milestone-1\transforms\7574accc52dfce2dea6adf4acc239b9a\transformed\work-runtime-2.9.0\AndroidManifest.xml:28:5-143:19
 MERGED from [androidx.compose.ui:ui-tooling-android:1.6.1] C:\Users\LENOVO\.gradle\caches\9.0-milestone-1\transforms\567da1ae89f27375e2e83a1055280548\transformed\ui-tooling-release\AndroidManifest.xml:22:5-26:19
@@ -143,59 +143,61 @@ MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\LENOVO\.gradle\cac
 	android:roundIcon
 		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:21:9-54
 	tools:targetApi
-		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:24:9-29
+		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:25:9-29
 	android:icon
 		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:19:9-43
 	android:allowBackup
 		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:16:9-35
 	android:theme
-		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:23:9-51
+		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:24:9-51
 	android:dataExtractionRules
 		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:17:9-65
+	android:usesCleartextTraffic
+		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:23:9-44
 activity#com.animenotifier.MainActivity
-ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:26:9-35:20
+ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:27:9-36:20
 	android:label
-		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:29:13-45
+		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:30:13-45
 	android:exported
-		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:28:13-36
+		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:29:13-36
 	android:theme
-		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:30:13-55
+		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:31:13-55
 	android:name
-		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:27:13-41
+		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:28:13-41
 intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
-ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:31:13-34:29
+ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:32:13-35:29
 action#android.intent.action.MAIN
-ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:32:17-69
+ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:33:17-69
 	android:name
-		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:32:25-66
+		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:33:25-66
 category#android.intent.category.LAUNCHER
-ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:33:17-77
+ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:34:17-77
 	android:name
-		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:33:27-74
+		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:34:27-74
 receiver#com.animenotifier.data.notification.EpisodeNotificationReceiver
-ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:38:9-40:40
+ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:39:9-41:40
 	android:exported
-		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:40:13-37
+		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:41:13-37
 	android:name
-		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:39:13-74
+		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:40:13-74
 receiver#com.animenotifier.data.notification.BootReceiver
-ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:43:9-51:20
+ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:44:9-52:20
 	android:enabled
-		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:45:13-35
+		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:46:13-35
 	android:exported
-		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:46:13-37
+		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:47:13-37
 	android:name
-		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:44:13-59
+		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:45:13-59
 intent-filter#action:name:android.intent.action.BOOT_COMPLETED+action:name:android.intent.action.MY_PACKAGE_REPLACED
-ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:47:13-50:29
+ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:48:13-51:29
 action#android.intent.action.BOOT_COMPLETED
-ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:48:17-79
+ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:49:17-79
 	android:name
-		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:48:25-76
+		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:49:25-76
 action#android.intent.action.MY_PACKAGE_REPLACED
-ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:49:17-84
+ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:50:17-84
 	android:name
-		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:49:25-81
+		ADDED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml:50:25-81
 uses-sdk
 INJECTED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from C:\Users\LENOVO\.gemini\antigravity\scratch\anime-notifier\app\src\main\AndroidManifest.xml
