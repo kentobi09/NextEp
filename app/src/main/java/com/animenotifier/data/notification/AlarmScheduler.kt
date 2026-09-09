@@ -30,15 +30,15 @@ class AlarmScheduler(private val context: Context) {
         // Only schedule if alarm time is in the future
         if (alarmTimeMillis <= System.currentTimeMillis()) return
 
-        if (!canScheduleExactAlarms()) {
-            return
-        }
+        // Cancel any previous alarm for this anime first
+        cancelAlarm(anime.id)
 
         val intent = Intent(context, EpisodeNotificationReceiver::class.java).apply {
             putExtra(EXTRA_ANIME_ID, anime.id)
             putExtra(EXTRA_ANIME_TITLE, anime.title)
             putExtra(EXTRA_EPISODE_NUM, episodeNum)
             putExtra(EXTRA_COVER_IMAGE, anime.coverImage)
+            putExtra(EXTRA_LEAD_TIME_MINUTES, anime.alertLeadTimeMinutes)
         }
 
         val pendingIntent = PendingIntent.getBroadcast(
@@ -49,21 +49,44 @@ class AlarmScheduler(private val context: Context) {
         )
 
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                alarmManager.setExactAndAllowWhileIdle(
-                    AlarmManager.RTC_WAKEUP,
-                    alarmTimeMillis,
-                    pendingIntent
-                )
+            if (canScheduleExactAlarms()) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    alarmManager.setExactAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        alarmTimeMillis,
+                        pendingIntent
+                    )
+                } else {
+                    alarmManager.setExact(
+                        AlarmManager.RTC_WAKEUP,
+                        alarmTimeMillis,
+                        pendingIntent
+                    )
+                }
             } else {
-                alarmManager.setExact(
-                    AlarmManager.RTC_WAKEUP,
-                    alarmTimeMillis,
-                    pendingIntent
-                )
+                // Inexact fallback so the notification still triggers even if exact alarm permission wasn't granted
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    alarmManager.setAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        alarmTimeMillis,
+                        pendingIntent
+                    )
+                } else {
+                    alarmManager.set(
+                        AlarmManager.RTC_WAKEUP,
+                        alarmTimeMillis,
+                        pendingIntent
+                    )
+                }
             }
         } catch (e: SecurityException) {
             e.printStackTrace()
+            // Fallback if SecurityException occurs
+            alarmManager.set(
+                AlarmManager.RTC_WAKEUP,
+                alarmTimeMillis,
+                pendingIntent
+            )
         }
     }
 
@@ -83,5 +106,6 @@ class AlarmScheduler(private val context: Context) {
         const val EXTRA_ANIME_TITLE = "extra_anime_title"
         const val EXTRA_EPISODE_NUM = "extra_episode_num"
         const val EXTRA_COVER_IMAGE = "extra_cover_image"
+        const val EXTRA_LEAD_TIME_MINUTES = "extra_lead_time_minutes"
     }
 }

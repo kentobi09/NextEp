@@ -15,6 +15,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshContainer
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,6 +54,19 @@ fun HomeScreen(
 
     var showSettingsForAnime by remember { mutableStateOf<AnimeEntity?>(null) }
 
+    val pullToRefreshState = rememberPullToRefreshState()
+    if (pullToRefreshState.isRefreshing) {
+        LaunchedEffect(true) {
+            viewModel.refreshSchedules()
+        }
+    }
+
+    LaunchedEffect(isRefreshing) {
+        if (!isRefreshing) {
+            pullToRefreshState.endRefresh()
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -62,16 +78,6 @@ fun HomeScreen(
                         letterSpacing = 2.sp,
                         color = TextPrimary
                     )
-                },
-                actions = {
-                    IconButton(onClick = { viewModel.refreshSchedules() }) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh Schedules",
-                            tint = TextSecondary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = SurfaceRoot
@@ -87,56 +93,60 @@ fun HomeScreen(
         ) {
             ExactAlarmPermissionBanner()
 
-            if (isRefreshing) {
-                LinearProgressIndicator(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = AccentPrimary,
-                    trackColor = SurfaceElevated
-                )
-            }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .nestedScroll(pullToRefreshState.nestedScrollConnection)
+            ) {
+                if (watchlist.isEmpty()) {
+                    EmptyWatchlistState(onNavigateToSearch = onNavigateToSearch)
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(bottom = 24.dp)
+                    ) {
+                        // Hero Airing Next Banner
+                        heroAnime?.let { hero ->
+                            item(key = "hero_banner") {
+                                HeroAiringNextCard(
+                                    anime = hero,
+                                    onClick = { viewModel.openAnimeDetailFromEntity(hero) },
+                                    onOpenSettings = { showSettingsForAnime = hero }
+                                )
+                            }
+                        }
 
-            if (watchlist.isEmpty()) {
-                EmptyWatchlistState(onNavigateToSearch = onNavigateToSearch)
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 24.dp)
-                ) {
-                    // Hero Airing Next Banner
-                    heroAnime?.let { hero ->
-                        item(key = "hero_banner") {
-                            HeroAiringNextCard(
-                                anime = hero,
-                                onClick = { viewModel.openAnimeDetailFromEntity(hero) },
-                                onOpenSettings = { showSettingsForAnime = hero }
+                        // Section Title
+                        item(key = "section_header") {
+                            Text(
+                                text = "WATCHLIST",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.4.sp,
+                                color = TextSecondary,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                             )
                         }
-                    }
 
-                    // Section Title
-                    item(key = "section_header") {
-                        Text(
-                            text = "WATCHLIST",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.4.sp,
-                            color = TextSecondary,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-                        )
-                    }
-
-                    // Watchlist Cards
-                    items(watchlist, key = { it.id }) { anime ->
-                        Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-                            MinimalAnimeWatchlistCard(
-                                anime = anime,
-                                onClick = { viewModel.openAnimeDetailFromEntity(anime) },
-                                onIncrementWatched = { viewModel.incrementWatched(anime.id) },
-                                onOpenSettings = { showSettingsForAnime = anime }
-                            )
+                        // Watchlist Cards
+                        items(watchlist, key = { it.id }) { anime ->
+                            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                                MinimalAnimeWatchlistCard(
+                                    anime = anime,
+                                    onClick = { viewModel.openAnimeDetailFromEntity(anime) },
+                                    onOpenSettings = { showSettingsForAnime = anime }
+                                )
+                            }
                         }
                     }
                 }
+
+                PullToRefreshContainer(
+                    state = pullToRefreshState,
+                    modifier = Modifier.align(Alignment.TopCenter),
+                    containerColor = SurfaceElevated,
+                    contentColor = AccentPrimary
+                )
             }
         }
     }
@@ -305,10 +315,8 @@ fun HeroAiringNextCard(
 fun MinimalAnimeWatchlistCard(
     anime: AnimeEntity,
     onClick: () -> Unit,
-    onIncrementWatched: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
-    val haptic = LocalHapticFeedback.current
     var currentTimeMillis by remember { mutableStateOf(System.currentTimeMillis()) }
 
     LaunchedEffect(Unit) {
@@ -415,49 +423,6 @@ fun MinimalAnimeWatchlistCard(
                                 color = if (isAiringSoon) StatusLive else TextSecondary
                             )
                         }
-                    }
-                }
-
-                // Watched Progress Row with Haptic Feedback
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val progressLabel = buildString {
-                        append("WATCHED ${anime.watchedEpisodes}")
-                        if (anime.totalEpisodes != null) {
-                            append(" / ${anime.totalEpisodes}")
-                        }
-                    }
-
-                    Text(
-                        text = progressLabel,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp,
-                        color = TextSecondary
-                    )
-
-                    // Minimalist +1 Watched Button with Haptic
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(SurfaceElevatedHigh)
-                            .border(1.dp, SurfaceBorder, RoundedCornerShape(4.dp))
-                            .clickable {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onIncrementWatched()
-                            }
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = "+1 EP",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp,
-                            color = TextPrimary
-                        )
                     }
                 }
             }

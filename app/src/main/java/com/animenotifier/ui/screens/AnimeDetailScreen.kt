@@ -1,7 +1,5 @@
 package com.animenotifier.ui.screens
 
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,7 +26,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -102,7 +99,6 @@ fun AnimeDetailScreen(
     onBack: () -> Unit,
     onGenreClick: (String) -> Unit
 ) {
-    val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val watchlist by viewModel.savedAnimeList.collectAsState()
 
@@ -133,7 +129,6 @@ fun AnimeDetailScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Button(
@@ -150,7 +145,7 @@ fun AnimeDetailScreen(
                                 }
                             }
                         },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(6.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (isSaved) SurfaceElevatedHigh else AccentPrimary
@@ -171,25 +166,6 @@ fun AnimeDetailScreen(
                             letterSpacing = 1.2.sp,
                             color = TextPrimary
                         )
-                    }
-
-                    detail.siteUrl?.let { url ->
-                        OutlinedButton(
-                            onClick = {
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                                context.startActivity(intent)
-                            },
-                            shape = RoundedCornerShape(6.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
-                            border = BorderStroke(1.dp, SurfaceBorder)
-                        ) {
-                            Text(
-                                text = "ANILIST ↗",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp
-                            )
-                        }
                     }
                 }
             }

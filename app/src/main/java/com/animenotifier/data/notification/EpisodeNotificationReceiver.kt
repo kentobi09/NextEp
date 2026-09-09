@@ -17,6 +17,7 @@ class EpisodeNotificationReceiver : BroadcastReceiver() {
         val animeId = intent.getIntExtra(AlarmScheduler.EXTRA_ANIME_ID, -1)
         val animeTitle = intent.getStringExtra(AlarmScheduler.EXTRA_ANIME_TITLE) ?: "Anime Alert"
         val episodeNum = intent.getIntExtra(AlarmScheduler.EXTRA_EPISODE_NUM, 1)
+        val leadTimeMinutes = intent.getIntExtra(AlarmScheduler.EXTRA_LEAD_TIME_MINUTES, 0)
 
         createNotificationChannel(context)
 
@@ -31,11 +32,24 @@ class EpisodeNotificationReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val (titleText, bodyText) = when {
+            leadTimeMinutes >= 60 -> {
+                val hours = leadTimeMinutes / 60
+                "Episode Airing Soon! ⏰" to "$animeTitle Episode $episodeNum airs in $hours hour!"
+            }
+            leadTimeMinutes > 0 -> {
+                "Episode Airing Soon! ⏰" to "$animeTitle Episode $episodeNum airs in $leadTimeMinutes minutes!"
+            }
+            else -> {
+                "New Episode Airing! 🍿" to "$animeTitle Episode $episodeNum is out now!"
+            }
+        }
+
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle("New Episode Airing! 🍿")
-            .setContentText("$animeTitle Episode $episodeNum is out now!")
-            .setStyle(NotificationCompat.BigTextStyle().bigText("$animeTitle Episode $episodeNum has released! Tap to view details."))
+            .setContentTitle(titleText)
+            .setContentText(bodyText)
+            .setStyle(NotificationCompat.BigTextStyle().bigText("$bodyText Tap to view details."))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
