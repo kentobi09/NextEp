@@ -53,7 +53,8 @@ data class AniListMedia(
     val studios: StudioConnection? = null,
     val genres: List<String> = emptyList(),
     val averageScore: Int? = null,
-    val nextAiringEpisode: AiringEpisode? = null
+    val nextAiringEpisode: AiringEpisode? = null,
+    val mediaType: String = "ANIME"
 ) {
     fun displayTitle(): String {
         return title?.english ?: title?.romaji ?: "Unknown Title"

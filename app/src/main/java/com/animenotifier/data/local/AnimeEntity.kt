@@ -23,5 +23,6 @@ data class AnimeEntity(
     val siteUrl: String? = null,
     val notificationsEnabled: Boolean = true,
     val alertLeadTimeMinutes: Int = 0,     // 0 = At release time, 15 = 15 min before, 60 = 1 hr before
+    val mediaType: String = "ANIME",       // ANIME, SERIES, MOVIE
     val updatedAt: Long = System.currentTimeMillis()
 )

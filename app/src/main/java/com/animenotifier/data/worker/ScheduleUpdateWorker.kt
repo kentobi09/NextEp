@@ -1,4 +1,4 @@
-package com.animenotifier.data.worker
+﻿package com.animenotifier.data.worker
 
 import android.content.Context
 import androidx.work.CoroutineWorker
@@ -6,6 +6,7 @@ import androidx.work.WorkerParameters
 import com.animenotifier.data.local.AnimeDatabase
 import com.animenotifier.data.notification.AlarmScheduler
 import com.animenotifier.data.remote.AniListApiService
+import com.animenotifier.data.remote.TvMazeApiService
 
 class ScheduleUpdateWorker(
     context: Context,
@@ -15,13 +16,18 @@ class ScheduleUpdateWorker(
     override suspend fun doWork(): Result {
         val database = AnimeDatabase.getDatabase(applicationContext)
         val dao = database.animeDao()
-        val apiService = AniListApiService()
+        val aniListApiService = AniListApiService()
+        val tvMazeApiService = TvMazeApiService()
         val alarmScheduler = AlarmScheduler(applicationContext)
 
         return try {
             val savedList = dao.getAllSavedAnimeList()
             for (saved in savedList) {
-                val updatedMedia = apiService.getAnimeById(saved.id) ?: continue
+                val updatedMedia = if (saved.id < 0) {
+                    tvMazeApiService.getShowById(-saved.id)
+                } else {
+                    aniListApiService.getAnimeById(saved.id)
+                } ?: continue
 
                 val nextEp = updatedMedia.nextAiringEpisode
                 val updatedEntity = saved.copy(
@@ -35,6 +41,7 @@ class ScheduleUpdateWorker(
                     nextEpisodeNumber = nextEp?.episode ?: saved.nextEpisodeNumber,
                     nextEpisodeAiringAt = nextEp?.airingAt ?: saved.nextEpisodeAiringAt,
                     status = updatedMedia.status ?: saved.status,
+                    mediaType = updatedMedia.mediaType,
                     updatedAt = System.currentTimeMillis()
                 )
 

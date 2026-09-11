@@ -7,39 +7,105 @@ import com.animenotifier.data.local.AnimeEntity
 import com.animenotifier.data.notification.AlarmScheduler
 import com.animenotifier.data.remote.AniListApiService
 import com.animenotifier.data.remote.AniListMedia
+import com.animenotifier.data.remote.TvMazeApiService
 import com.animenotifier.data.worker.ScheduleUpdateWorker
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
+
+enum class MediaCategory(val label: String) {
+    ALL("All"),
+    ANIME("Anime"),
+    SERIES("TV Series")
+}
 
 class AnimeRepository(
     private val context: Context,
     private val dao: AnimeDao,
     private val apiService: AniListApiService,
+    private val tvMazeApiService: TvMazeApiService,
     private val alarmScheduler: AlarmScheduler
 ) {
 
     val savedAnimeList: Flow<List<AnimeEntity>> = dao.getAllSavedAnime()
 
-    suspend fun searchAnime(query: String?, genre: String? = null): List<AniListMedia> {
-        if (query.isNullExOrBlank() && genre.isNullOrBlank()) return emptyList()
-        return apiService.searchAnime(query, genre)
+    suspend fun search(
+        query: String?,
+        genre: String? = null,
+        category: MediaCategory = MediaCategory.ALL
+    ): List<AniListMedia> = coroutineScope {
+        val cleanQuery = query?.trim()
+        if (cleanQuery.isNullOrEmpty() && genre.isNullOrBlank()) return@coroutineScope emptyList()
+
+        when (category) {
+            MediaCategory.ANIME -> {
+                apiService.searchAnime(cleanQuery, genre)
+            }
+            MediaCategory.SERIES -> {
+                if (!cleanQuery.isNullOrEmpty()) {
+                    tvMazeApiService.searchShows(cleanQuery)
+                } else emptyList()
+            }
+            MediaCategory.ALL -> {
+                val animeDeferred = async { apiService.searchAnime(cleanQuery, genre) }
+                val tvDeferred = async {
+                    if (!cleanQuery.isNullOrEmpty()) {
+                        tvMazeApiService.searchShows(cleanQuery)
+                    } else emptyList()
+                }
+
+                val animeResults = animeDeferred.await()
+                val tvResults = tvDeferred.await()
+
+                interleaveMedia(animeResults, tvResults)
+            }
+        }
     }
 
-    suspend fun getAiringToday(): List<AniListMedia> {
-        return apiService.getAiringToday()
+    suspend fun getAiringToday(category: MediaCategory = MediaCategory.ALL): List<AniListMedia> = coroutineScope {
+        when (category) {
+            MediaCategory.ANIME -> apiService.getAiringToday()
+            MediaCategory.SERIES -> tvMazeApiService.getAiringToday()
+            MediaCategory.ALL -> {
+                val animeDeferred = async { apiService.getAiringToday() }
+                val tvDeferred = async { tvMazeApiService.getAiringToday() }
+                interleaveMedia(animeDeferred.await(), tvDeferred.await())
+            }
+        }
     }
 
-    suspend fun getTrendingThisSeason(): List<AniListMedia> {
-        return apiService.getTrendingThisSeason()
+    suspend fun getTrendingThisSeason(category: MediaCategory = MediaCategory.ALL): List<AniListMedia> = coroutineScope {
+        when (category) {
+            MediaCategory.ANIME -> apiService.getTrendingThisSeason()
+            MediaCategory.SERIES -> tvMazeApiService.getAiringToday()
+            MediaCategory.ALL -> {
+                val animeDeferred = async { apiService.getTrendingThisSeason() }
+                val tvDeferred = async { tvMazeApiService.getAiringToday() }
+                interleaveMedia(animeDeferred.await(), tvDeferred.await())
+            }
+        }
     }
 
-    suspend fun getTopAiring(): List<AniListMedia> {
-        return apiService.getTopAiring()
+    suspend fun getTopAiring(category: MediaCategory = MediaCategory.ALL): List<AniListMedia> = coroutineScope {
+        when (category) {
+            MediaCategory.ANIME -> apiService.getTopAiring()
+            MediaCategory.SERIES -> tvMazeApiService.getAiringToday()
+            MediaCategory.ALL -> {
+                val animeDeferred = async { apiService.getTopAiring() }
+                val tvDeferred = async { tvMazeApiService.getAiringToday() }
+                interleaveMedia(animeDeferred.await(), tvDeferred.await())
+            }
+        }
     }
 
-    suspend fun getAnimeById(id: Int): AniListMedia? {
-        return apiService.getAnimeById(id)
+    suspend fun getMediaById(id: Int): AniListMedia? {
+        return if (id < 0) {
+            tvMazeApiService.getShowById(-id)
+        } else {
+            apiService.getAnimeById(id)
+        }
     }
 
     suspend fun getSavedAnimeById(id: Int): AnimeEntity? {
@@ -68,7 +134,8 @@ class AnimeRepository(
             status = media.status,
             siteUrl = media.siteUrl,
             notificationsEnabled = true,
-            alertLeadTimeMinutes = 0
+            alertLeadTimeMinutes = 0,
+            mediaType = media.mediaType
         )
 
         dao.insertOrUpdate(entity)
@@ -97,7 +164,7 @@ class AnimeRepository(
     suspend fun refreshAllSchedules() {
         val list = dao.getAllSavedAnimeList()
         for (anime in list) {
-            val updated = apiService.getAnimeById(anime.id) ?: continue
+            val updated = getMediaById(anime.id) ?: continue
             val nextEp = updated.nextAiringEpisode
             val dayOfWeek = nextEp?.airingAt?.let { calculateDayOfWeek(it) }
 
@@ -115,6 +182,7 @@ class AnimeRepository(
                 nextEpisodeAiringAt = nextEp?.airingAt ?: anime.nextEpisodeAiringAt,
                 airingDayOfWeek = dayOfWeek ?: anime.airingDayOfWeek,
                 status = updated.status ?: anime.status,
+                mediaType = updated.mediaType,
                 updatedAt = System.currentTimeMillis()
             )
             dao.insertOrUpdate(newEntity)
@@ -146,6 +214,16 @@ class AnimeRepository(
         }
     }
 
+    private fun interleaveMedia(a: List<AniListMedia>, b: List<AniListMedia>): List<AniListMedia> {
+        val result = mutableListOf<AniListMedia>()
+        val maxLen = maxOf(a.size, b.size)
+        for (i in 0 until maxLen) {
+            if (i < a.size) result.add(a[i])
+            if (i < b.size) result.add(b[i])
+        }
+        return result
+    }
+
     private fun calculateDayOfWeek(timestampSeconds: Long): Int {
         val calendar = Calendar.getInstance().apply {
             timeInMillis = timestampSeconds * 1000L
@@ -162,6 +240,4 @@ class AnimeRepository(
             else -> 1
         }
     }
-
-    private fun String?.isNullExOrBlank(): Boolean = this == null || this.trim().isEmpty()
 }

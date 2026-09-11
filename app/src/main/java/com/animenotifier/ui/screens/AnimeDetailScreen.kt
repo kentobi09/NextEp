@@ -52,6 +52,7 @@ data class AnimeDetailModel(
     val nextEpisodeNumber: Int?,
     val nextEpisodeAiringAt: Long?,
     val siteUrl: String?,
+    val mediaType: String = "ANIME",
     val originalMedia: AniListMedia? = null
 )
 
@@ -70,6 +71,7 @@ fun AniListMedia.toDetailModel(): AnimeDetailModel = AnimeDetailModel(
     nextEpisodeNumber = nextAiringEpisode?.episode,
     nextEpisodeAiringAt = nextAiringEpisode?.airingAt,
     siteUrl = siteUrl,
+    mediaType = mediaType,
     originalMedia = this
 )
 
@@ -88,6 +90,7 @@ fun AnimeEntity.toDetailModel(): AnimeDetailModel = AnimeDetailModel(
     nextEpisodeNumber = nextEpisodeNumber,
     nextEpisodeAiringAt = nextEpisodeAiringAt,
     siteUrl = siteUrl,
+    mediaType = mediaType,
     originalMedia = null
 )
 
@@ -312,8 +315,9 @@ fun AnimeDetailScreen(
                     }
 
                     detail.studio?.let { studio ->
+                        val studioOrNetworkLabel = if (detail.mediaType == "SERIES") "NETWORK" else "STUDIO"
                         Text(
-                            text = "STUDIO: ${studio.uppercase()}",
+                            text = "$studioOrNetworkLabel: ${studio.uppercase()}",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.sp,
@@ -438,7 +442,10 @@ fun AnimeDetailScreen(
                     ) {
                         DetailRow("TOTAL EPISODES", "${detail.totalEpisodes ?: "Unknown"}")
                         detail.durationMinutes?.let { DetailRow("EPISODE LENGTH", "$it Minutes") }
-                        detail.studio?.let { DetailRow("ANIMATION STUDIO", it) }
+                        detail.studio?.let {
+                            val rowLabel = if (detail.mediaType == "SERIES") "NETWORK / PLATFORM" else "ANIMATION STUDIO"
+                            DetailRow(rowLabel, it)
+                        }
                     }
                 }
 

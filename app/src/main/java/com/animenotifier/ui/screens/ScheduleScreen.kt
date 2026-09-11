@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -187,6 +188,22 @@ fun MinimalScheduleAnimeCard(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    val isSeries = anime.mediaType == "SERIES"
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(if (isSeries) Color(0xFF1E3A8A) else AccentPrimary.copy(alpha = 0.2f))
+                            .padding(horizontal = 5.dp, vertical = 1.dp)
+                    ) {
+                        Text(
+                            text = if (isSeries) "SERIES" else "ANIME",
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.8.sp,
+                            color = if (isSeries) Color(0xFF93C5FD) else AccentPrimary
+                        )
+                    }
+
                     Text(
                         text = "EP ${anime.nextEpisodeNumber ?: "?"}".uppercase(),
                         fontSize = 10.sp,

@@ -8,7 +8,9 @@ import com.animenotifier.data.local.AnimeEntity
 import com.animenotifier.data.notification.AlarmScheduler
 import com.animenotifier.data.remote.AniListApiService
 import com.animenotifier.data.remote.AniListMedia
+import com.animenotifier.data.remote.TvMazeApiService
 import com.animenotifier.data.repository.AnimeRepository
+import com.animenotifier.data.repository.MediaCategory
 import com.animenotifier.ui.screens.AnimeDetailModel
 import com.animenotifier.ui.screens.toDetailModel
 import kotlinx.coroutines.Job
@@ -28,27 +30,36 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
 
     private val database = AnimeDatabase.getDatabase(application)
     private val apiService = AniListApiService()
+    private val tvMazeApiService = TvMazeApiService()
     private val alarmScheduler = AlarmScheduler(application)
     private val repository = AnimeRepository(
         application,
         database.animeDao(),
         apiService,
+        tvMazeApiService,
         alarmScheduler
     )
 
     val savedAnimeList: StateFlow<List<AnimeEntity>> = repository.savedAnimeList
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Hero anime: Show from watchlist airing earliest in the future
-    val nextAiringHero: StateFlow<AnimeEntity?> = savedAnimeList.map { list ->
+    val upcomingAiringList: StateFlow<List<AnimeEntity>> = savedAnimeList.map { list ->
         val now = System.currentTimeMillis() / 1000L
-        list.filter { it.nextEpisodeAiringAt != null && it.nextEpisodeAiringAt > now }
-            .minByOrNull { it.nextEpisodeAiringAt!! }
-            ?: list.firstOrNull { it.nextEpisodeAiringAt != null }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+        val upcoming = list.filter { it.nextEpisodeAiringAt != null && it.nextEpisodeAiringAt > now }
+            .sortedBy { it.nextEpisodeAiringAt!! }
+        if (upcoming.isNotEmpty()) {
+            upcoming
+        } else {
+            list.filter { it.nextEpisodeAiringAt != null }
+                .ifEmpty { list.take(1) }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    private val _selectedCategory = MutableStateFlow(MediaCategory.ALL)
+    val selectedCategory: StateFlow<MediaCategory> = _selectedCategory.asStateFlow()
 
     private val _selectedGenre = MutableStateFlow<String?>(null)
     val selectedGenre: StateFlow<String?> = _selectedGenre.asStateFlow()
@@ -68,39 +79,50 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedScheduleDay = MutableStateFlow(currentDayOfWeek())
     val selectedScheduleDay: StateFlow<Int> = _selectedScheduleDay.asStateFlow()
 
-    // Full-screen Anime Detail Screen State
     private val _activeDetail = MutableStateFlow<AnimeDetailModel?>(null)
     val activeDetail: StateFlow<AnimeDetailModel?> = _activeDetail.asStateFlow()
 
     private var searchJob: Job? = null
 
+
     init {
         repository.setupBackgroundWorker()
-        loadDiscoveryData(DiscoveryChip.TRENDING)
+        loadDiscoveryData(DiscoveryChip.TRENDING, _selectedCategory.value)
     }
 
     fun onSearchQueryChanged(query: String) {
         _searchQuery.value = query
         _activeChip.value = DiscoveryChip.SEARCH
-        executeSearch(query, _selectedGenre.value)
+        executeSearch(query, _selectedGenre.value, _selectedCategory.value)
+    }
+
+    fun onCategorySelected(category: MediaCategory) {
+        _selectedCategory.value = category
+        if (_searchQuery.value.isNotBlank() || _selectedGenre.value != null) {
+            executeSearch(_searchQuery.value, _selectedGenre.value, category)
+        } else {
+            loadDiscoveryData(_activeChip.value, category)
+        }
     }
 
     fun onGenreSelected(genre: String?) {
         _selectedGenre.value = if (_selectedGenre.value == genre) null else genre
         _activeChip.value = DiscoveryChip.SEARCH
-        executeSearch(_searchQuery.value, _selectedGenre.value)
+        executeSearch(_searchQuery.value, _selectedGenre.value, _selectedCategory.value)
     }
 
-    private fun executeSearch(query: String?, genre: String?) {
+
+    private fun executeSearch(query: String?, genre: String?, category: MediaCategory) {
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
-            delay(300) // 300ms debounce
+            delay(300)
             _isSearching.value = true
-            val results = repository.searchAnime(query, genre)
+            val results = repository.search(query, genre, category)
             _searchResults.value = results
             _isSearching.value = false
         }
     }
+
 
     fun onChipSelected(chip: DiscoveryChip) {
         _activeChip.value = chip
@@ -108,16 +130,17 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
             _searchQuery.value = ""
             _selectedGenre.value = null
         }
-        loadDiscoveryData(chip)
+        loadDiscoveryData(chip, _selectedCategory.value)
     }
 
-    private fun loadDiscoveryData(chip: DiscoveryChip) {
+
+    private fun loadDiscoveryData(chip: DiscoveryChip, category: MediaCategory) {
         viewModelScope.launch {
             _isSearching.value = true
             val results = when (chip) {
-                DiscoveryChip.AIRING_TODAY -> repository.getAiringToday()
-                DiscoveryChip.TRENDING -> repository.getTrendingThisSeason()
-                DiscoveryChip.TOP_AIRING -> repository.getTopAiring()
+                DiscoveryChip.AIRING_TODAY -> repository.getAiringToday(category)
+                DiscoveryChip.TRENDING -> repository.getTrendingThisSeason(category)
+                DiscoveryChip.TOP_AIRING -> repository.getTopAiring(category)
                 DiscoveryChip.SEARCH -> _searchResults.value
             }
             _searchResults.value = results
@@ -125,17 +148,21 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+
     fun openAnimeDetail(media: AniListMedia) {
         _activeDetail.value = media.toDetailModel()
     }
+
 
     fun openAnimeDetailFromEntity(entity: AnimeEntity) {
         _activeDetail.value = entity.toDetailModel()
     }
 
+
     fun closeAnimeDetail() {
         _activeDetail.value = null
     }
+
 
     fun toggleSaveAnime(media: AniListMedia) {
         viewModelScope.launch {
@@ -148,17 +175,20 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+
     fun removeSavedAnime(animeId: Int) {
         viewModelScope.launch {
             repository.removeAnime(animeId)
         }
     }
 
+
     fun incrementWatched(animeId: Int) {
         viewModelScope.launch {
             repository.incrementWatchedEpisode(animeId)
         }
     }
+
 
     fun updateNotificationSettings(animeId: Int, enabled: Boolean, leadTimeMinutes: Int) {
         viewModelScope.launch {
@@ -173,6 +203,7 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
             _isRefreshing.value = false
         }
     }
+
 
     fun setSelectedScheduleDay(day: Int) {
         _selectedScheduleDay.value = day

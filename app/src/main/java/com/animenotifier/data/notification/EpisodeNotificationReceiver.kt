@@ -63,10 +63,10 @@ class EpisodeNotificationReceiver : BroadcastReceiver() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Anime Episode Alerts",
+                "Episode Release Alerts",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Notifications for new anime episode releases"
+                description = "Notifications for new anime and TV series episode releases"
                 enableVibration(true)
             }
 

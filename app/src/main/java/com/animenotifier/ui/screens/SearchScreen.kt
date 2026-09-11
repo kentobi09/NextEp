@@ -57,6 +57,7 @@ fun SearchScreen(viewModel: AnimeViewModel) {
     val searchResults by viewModel.searchResults.collectAsState()
     val isSearching by viewModel.isSearching.collectAsState()
     val activeChip by viewModel.activeChip.collectAsState()
+    val selectedCategory by viewModel.selectedCategory.collectAsState()
     val selectedGenre by viewModel.selectedGenre.collectAsState()
     val watchlist by viewModel.savedAnimeList.collectAsState()
 
@@ -70,7 +71,7 @@ fun SearchScreen(viewModel: AnimeViewModel) {
                     .background(SurfaceRoot)
                     .padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 8.dp)
             ) {
-                // Clean icon-free search bar
+                // Clean search bar
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { viewModel.onSearchQueryChanged(it) },
@@ -79,7 +80,7 @@ fun SearchScreen(viewModel: AnimeViewModel) {
                         .clip(RoundedCornerShape(8.dp)),
                     placeholder = {
                         Text(
-                            text = "Search titles, studios...",
+                            text = "Search anime, TV series, movies...",
                             color = TextSecondary,
                             fontSize = 14.sp
                         )
@@ -107,6 +108,40 @@ fun SearchScreen(viewModel: AnimeViewModel) {
                     ),
                     shape = RoundedCornerShape(8.dp)
                 )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Media Category Filter Pills: [ ALL | ANIME | TV SERIES ]
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    com.animenotifier.data.repository.MediaCategory.values().forEach { category ->
+                        val isSelected = (selectedCategory == category)
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (isSelected) AccentPrimary else SurfaceElevated)
+                                .border(
+                                    1.dp,
+                                    if (isSelected) AccentPrimary else SurfaceBorder,
+                                    RoundedCornerShape(6.dp)
+                                )
+                                .clickable { viewModel.onCategorySelected(category) }
+                                .padding(vertical = 7.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = category.label.uppercase(),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.1.sp,
+                                color = if (isSelected) TextPrimary else TextSecondary
+                            )
+                        }
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(10.dp))
 
@@ -260,6 +295,26 @@ fun MinimalSearchResultCard(
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
+
+            // Media Type Tag (SERIES vs ANIME)
+            val isSeries = media.mediaType == "SERIES"
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(8.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(SurfaceRoot.copy(alpha = 0.85f))
+                    .border(1.dp, SurfaceBorder, RoundedCornerShape(4.dp))
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
+            ) {
+                Text(
+                    text = if (isSeries) "SERIES" else "ANIME",
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp,
+                    color = if (isSeries) Color(0xFF60A5FA) else AccentPrimary
+                )
+            }
 
             // Minimalist Single Tap Toggle Button
             Box(

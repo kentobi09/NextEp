@@ -2,7 +2,7 @@ package com.animenotifier.ui.screens
 
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.animation.*
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -14,6 +14,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshContainer
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -42,14 +44,14 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     viewModel: AnimeViewModel,
     onNavigateToSearch: () -> Unit
 ) {
     val watchlist by viewModel.savedAnimeList.collectAsState()
-    val heroAnime by viewModel.nextAiringHero.collectAsState()
+    val upcomingAiringList by viewModel.upcomingAiringList.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
 
     var showSettingsForAnime by remember { mutableStateOf<AnimeEntity?>(null) }
@@ -105,13 +107,13 @@ fun HomeScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(bottom = 24.dp)
                     ) {
-                        // Hero Airing Next Banner
-                        heroAnime?.let { hero ->
-                            item(key = "hero_banner") {
-                                HeroAiringNextCard(
-                                    anime = hero,
-                                    onClick = { viewModel.openAnimeDetailFromEntity(hero) },
-                                    onOpenSettings = { showSettingsForAnime = hero }
+                        // Hero Airing Next Carousel (Swipeable across upcoming watchlist items)
+                        if (upcomingAiringList.isNotEmpty()) {
+                            item(key = "hero_carousel") {
+                                HeroAiringNextCarousel(
+                                    items = upcomingAiringList,
+                                    onClick = { anime -> viewModel.openAnimeDetailFromEntity(anime) },
+                                    onOpenSettings = { anime -> showSettingsForAnime = anime }
                                 )
                             }
                         }
@@ -168,12 +170,14 @@ fun HomeScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun HeroAiringNextCard(
-    anime: AnimeEntity,
-    onClick: () -> Unit,
-    onOpenSettings: () -> Unit
+fun HeroAiringNextCarousel(
+    items: List<AnimeEntity>,
+    onClick: (AnimeEntity) -> Unit,
+    onOpenSettings: (AnimeEntity) -> Unit
 ) {
+    val pagerState = rememberPagerState(pageCount = { items.size })
     var currentTimeMillis by remember { mutableStateOf(System.currentTimeMillis()) }
 
     LaunchedEffect(Unit) {
@@ -183,128 +187,179 @@ fun HeroAiringNextCard(
         }
     }
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .border(1.dp, SurfaceBorder, RoundedCornerShape(8.dp))
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = SurfaceElevated)
+    Column(
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(180.dp)
-        ) {
-            // Background Image
-            AsyncImage(
-                model = anime.bannerImage ?: anime.coverImage,
-                contentDescription = anime.title,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
-
-            // Scrim Overlay
-            Box(
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            pageSpacing = 12.dp
+        ) { page ->
+            val anime = items[page]
+            Card(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                Color.Transparent,
-                                SurfaceElevated.copy(alpha = 0.85f),
-                                SurfaceElevated
-                            )
-                        )
-                    )
-            )
-
-            // Content
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(14.dp),
-                verticalArrangement = Arrangement.SpaceBetween
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .border(1.dp, SurfaceBorder, RoundedCornerShape(8.dp))
+                    .clickable { onClick(anime) },
+                colors = CardDefaults.cardColors(containerColor = SurfaceElevated)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(7.dp)
-                                .clip(CircleShape)
-                                .background(StatusLive)
-                        )
-                        Text(
-                            text = "AIRING NEXT",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.2.sp,
-                            color = StatusLive
-                        )
-                    }
+                    // Background Image
+                    AsyncImage(
+                        model = anime.bannerImage ?: anime.coverImage,
+                        contentDescription = anime.title,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
 
-                    IconButton(
-                        onClick = onOpenSettings,
-                        modifier = Modifier.size(24.dp)
+                    // Scrim Overlay
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(
+                                        Color.Transparent,
+                                        SurfaceElevated.copy(alpha = 0.85f),
+                                        SurfaceElevated
+                                    )
+                                )
+                            )
+                    )
+
+                    // Content
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(14.dp),
+                        verticalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "Options",
-                            tint = TextSecondary,
-                            modifier = Modifier.size(18.dp)
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(7.dp)
+                                        .clip(CircleShape)
+                                        .background(StatusLive)
+                                )
+                                Text(
+                                    text = if (items.size > 1) "AIRING NEXT (${page + 1}/${items.size})" else "AIRING NEXT",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.2.sp,
+                                    color = StatusLive
+                                )
+
+                                val isSeries = anime.mediaType == "SERIES"
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(3.dp))
+                                        .background(if (isSeries) Color(0xFF1E3A8A) else AccentPrimary.copy(alpha = 0.25f))
+                                        .padding(horizontal = 5.dp, vertical = 1.dp)
+                                ) {
+                                    Text(
+                                        text = if (isSeries) "SERIES" else "ANIME",
+                                        fontSize = 8.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 0.8.sp,
+                                        color = if (isSeries) Color(0xFF93C5FD) else AccentPrimary
+                                    )
+                                }
+                            }
+
+                            IconButton(
+                                onClick = { onOpenSettings(anime) },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = "Options",
+                                    tint = TextSecondary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+
+                        Column {
+                            Text(
+                                text = anime.title,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            val countdownText = remember(anime.nextEpisodeAiringAt, currentTimeMillis) {
+                                calculateCountdownText(anime.nextEpisodeAiringAt, currentTimeMillis)
+                            }
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = "EP ${anime.nextEpisodeNumber ?: "?"}",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.sp,
+                                    color = AccentPrimary
+                                )
+
+                                Text(
+                                    text = "•",
+                                    fontSize = 11.sp,
+                                    color = TextSecondary
+                                )
+
+                                Text(
+                                    text = countdownText,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = TextPrimary
+                                )
+                            }
+                        }
                     }
                 }
+            }
+        }
 
-                Column {
-                    Text(
-                        text = anime.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+        // Minimalist Page Indicator Dots (Only shown if more than 1 item)
+        if (items.size > 1) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp, bottom = 4.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                repeat(items.size) { iteration ->
+                    val isSelected = pagerState.currentPage == iteration
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 3.dp)
+                            .height(3.dp)
+                            .width(if (isSelected) 16.dp else 4.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(if (isSelected) AccentPrimary else SurfaceBorder)
                     )
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    val countdownText = remember(anime.nextEpisodeAiringAt, currentTimeMillis) {
-                        calculateCountdownText(anime.nextEpisodeAiringAt, currentTimeMillis)
-                    }
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = "EP ${anime.nextEpisodeNumber ?: "?"}",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp,
-                            color = AccentPrimary
-                        )
-
-                        Text(
-                            text = "•",
-                            fontSize = 11.sp,
-                            color = TextSecondary
-                        )
-
-                        Text(
-                            text = countdownText,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary
-                        )
-                    }
                 }
             }
         }
@@ -398,6 +453,23 @@ fun MinimalAnimeWatchlistCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
+                        // Media Type Pill
+                        val isSeries = anime.mediaType == "SERIES"
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(3.dp))
+                                .background(if (isSeries) Color(0xFF1E3A8A) else AccentPrimary.copy(alpha = 0.2f))
+                                .padding(horizontal = 5.dp, vertical = 1.dp)
+                        ) {
+                            Text(
+                                text = if (isSeries) "SERIES" else "ANIME",
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.8.sp,
+                                color = if (isSeries) Color(0xFF93C5FD) else AccentPrimary
+                            )
+                        }
+
                         Box(
                             modifier = Modifier
                                 .size(6.dp)
