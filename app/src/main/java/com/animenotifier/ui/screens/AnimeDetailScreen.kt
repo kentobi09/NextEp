@@ -12,7 +12,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Notifications
@@ -94,6 +94,44 @@ fun AnimeEntity.toDetailModel(): AnimeDetailModel = AnimeDetailModel(
     originalMedia = null
 )
 
+fun AnimeDetailModel.toEntity(): AnimeEntity {
+    val dayOfWeek = nextEpisodeAiringAt?.let {
+        val cal = java.util.Calendar.getInstance()
+        cal.timeInMillis = it * 1000L
+        when (cal.get(java.util.Calendar.DAY_OF_WEEK)) {
+            java.util.Calendar.MONDAY -> 1
+            java.util.Calendar.TUESDAY -> 2
+            java.util.Calendar.WEDNESDAY -> 3
+            java.util.Calendar.THURSDAY -> 4
+            java.util.Calendar.FRIDAY -> 5
+            java.util.Calendar.SATURDAY -> 6
+            java.util.Calendar.SUNDAY -> 7
+            else -> 1
+        }
+    }
+    return AnimeEntity(
+        id = id,
+        title = title,
+        coverImage = coverImage,
+        bannerImage = bannerImage,
+        synopsis = synopsis,
+        studio = studio,
+        durationMinutes = durationMinutes,
+        genres = if (genres.isNotEmpty()) genres.joinToString(", ") else null,
+        averageScore = averageScore,
+        watchedEpisodes = 0,
+        totalEpisodes = totalEpisodes,
+        nextEpisodeNumber = nextEpisodeNumber,
+        nextEpisodeAiringAt = nextEpisodeAiringAt,
+        airingDayOfWeek = dayOfWeek,
+        status = status,
+        siteUrl = siteUrl,
+        notificationsEnabled = true,
+        alertLeadTimeMinutes = 0,
+        mediaType = mediaType
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AnimeDetailScreen(
@@ -137,16 +175,7 @@ fun AnimeDetailScreen(
                     Button(
                         onClick = {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            if (isSaved) {
-                                viewModel.removeSavedAnime(detail.id)
-                            } else {
-                                detail.originalMedia?.let { media ->
-                                    viewModel.toggleSaveAnime(media)
-                                } ?: run {
-                                    // Fallback if opened from entity
-                                    viewModel.removeSavedAnime(detail.id)
-                                }
-                            }
+                            viewModel.toggleSaveDetail(detail)
                         },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(6.dp),
@@ -227,7 +256,7 @@ fun AnimeDetailScreen(
                             .border(1.dp, SurfaceBorder, CircleShape)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                             tint = TextPrimary,
                             modifier = Modifier.size(18.dp)

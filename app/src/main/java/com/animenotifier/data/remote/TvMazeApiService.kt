@@ -29,6 +29,7 @@ class TvMazeApiService {
     }
 
     private val baseUrl = "https://api.tvmaze.com"
+    private var cachedShows: List<TvMazeShow>? = null
 
     suspend fun searchShows(query: String): List<AniListMedia> = withContext(Dispatchers.IO) {
         if (query.isBlank()) return@withContext emptyList()
@@ -51,6 +52,61 @@ class TvMazeApiService {
             emptyList()
         } catch (e: Exception) {
             Log.e(TAG, "TVMaze search failed for query: $query", e)
+            emptyList()
+        }
+    }
+
+    suspend fun getShowsByGenre(genre: String): List<AniListMedia> = withContext(Dispatchers.IO) {
+        try {
+            val allShows = getOrFetchAllShows()
+            val cleanGenre = genre.trim()
+            val matched = allShows.filter { show ->
+                show.genres.any { it.equals(cleanGenre, ignoreCase = true) ||
+                    (cleanGenre.equals("Sci-Fi", ignoreCase = true) && it.equals("Science-Fiction", ignoreCase = true))
+                }
+            }
+            // Sort by highest rating
+            matched.sortedByDescending { it.rating?.average ?: 0.0 }
+                .take(30)
+                .map { it.toMediaItem() }
+        } catch (e: Exception) {
+            Log.e(TAG, "TVMaze getShowsByGenre failed for genre: $genre", e)
+            emptyList()
+        }
+    }
+
+    suspend fun getPopularShows(): List<AniListMedia> = withContext(Dispatchers.IO) {
+        try {
+            val allShows = getOrFetchAllShows()
+            allShows.sortedByDescending { it.rating?.average ?: 0.0 }
+                .take(30)
+                .map { it.toMediaItem() }
+        } catch (e: Exception) {
+            Log.e(TAG, "TVMaze getPopularShows failed", e)
+            emptyList()
+        }
+    }
+
+    private fun getOrFetchAllShows(): List<TvMazeShow> {
+        cachedShows?.let { return it }
+        return try {
+            val url = "$baseUrl/shows"
+            val request = Request.Builder()
+                .url(url)
+                .get()
+                .addHeader("User-Agent", "NextEp/1.0")
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string()
+                if (response.isSuccessful && !body.isNullOrBlank()) {
+                    val shows = json.decodeFromString<List<TvMazeShow>>(body)
+                    cachedShows = shows
+                    shows
+                } else emptyList()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed fetching TVMaze shows catalog", e)
             emptyList()
         }
     }

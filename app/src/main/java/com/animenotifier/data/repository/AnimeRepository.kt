@@ -45,14 +45,38 @@ class AnimeRepository(
             }
             MediaCategory.SERIES -> {
                 if (!cleanQuery.isNullOrEmpty()) {
-                    tvMazeApiService.searchShows(cleanQuery)
+                    val searchResults = tvMazeApiService.searchShows(cleanQuery)
+                    if (genre.isNullOrBlank()) {
+                        searchResults
+                    } else {
+                        val g = genre.trim()
+                        searchResults.filter { s ->
+                            s.genres.any { it.equals(g, ignoreCase = true) ||
+                                (g.equals("Sci-Fi", ignoreCase = true) && it.equals("Science-Fiction", ignoreCase = true))
+                            }
+                        }
+                    }
+                } else if (!genre.isNullOrBlank()) {
+                    tvMazeApiService.getShowsByGenre(genre)
                 } else emptyList()
             }
             MediaCategory.ALL -> {
                 val animeDeferred = async { apiService.searchAnime(cleanQuery, genre) }
                 val tvDeferred = async {
                     if (!cleanQuery.isNullOrEmpty()) {
-                        tvMazeApiService.searchShows(cleanQuery)
+                        val searchResults = tvMazeApiService.searchShows(cleanQuery)
+                        if (genre.isNullOrBlank()) {
+                            searchResults
+                        } else {
+                            val g = genre.trim()
+                            searchResults.filter { s ->
+                                s.genres.any { it.equals(g, ignoreCase = true) ||
+                                    (g.equals("Sci-Fi", ignoreCase = true) && it.equals("Science-Fiction", ignoreCase = true))
+                                }
+                            }
+                        }
+                    } else if (!genre.isNullOrBlank()) {
+                        tvMazeApiService.getShowsByGenre(genre)
                     } else emptyList()
                 }
 
@@ -79,10 +103,10 @@ class AnimeRepository(
     suspend fun getTrendingThisSeason(category: MediaCategory = MediaCategory.ALL): List<AniListMedia> = coroutineScope {
         when (category) {
             MediaCategory.ANIME -> apiService.getTrendingThisSeason()
-            MediaCategory.SERIES -> tvMazeApiService.getAiringToday()
+            MediaCategory.SERIES -> tvMazeApiService.getPopularShows()
             MediaCategory.ALL -> {
                 val animeDeferred = async { apiService.getTrendingThisSeason() }
-                val tvDeferred = async { tvMazeApiService.getAiringToday() }
+                val tvDeferred = async { tvMazeApiService.getPopularShows() }
                 interleaveMedia(animeDeferred.await(), tvDeferred.await())
             }
         }
@@ -113,33 +137,60 @@ class AnimeRepository(
     }
 
     suspend fun saveAnime(media: AniListMedia) {
-        val nextEp = media.nextAiringEpisode
+        val targetMedia = if (media.id < 0 && media.nextAiringEpisode == null) {
+            tvMazeApiService.getShowById(-media.id) ?: media
+        } else {
+            media
+        }
+
+        val nextEp = targetMedia.nextAiringEpisode
         val dayOfWeek = nextEp?.airingAt?.let { calculateDayOfWeek(it) }
 
         val entity = AnimeEntity(
-            id = media.id,
-            title = media.displayTitle(),
-            coverImage = media.bestCoverImage(),
-            bannerImage = media.bannerImage,
-            synopsis = media.cleanDescription(),
-            studio = media.primaryStudio(),
-            durationMinutes = media.duration,
-            genres = if (media.genres.isNotEmpty()) media.genres.joinToString(", ") else null,
-            averageScore = media.averageScore,
+            id = targetMedia.id,
+            title = targetMedia.displayTitle(),
+            coverImage = targetMedia.bestCoverImage(),
+            bannerImage = targetMedia.bannerImage,
+            synopsis = targetMedia.cleanDescription(),
+            studio = targetMedia.primaryStudio(),
+            durationMinutes = targetMedia.duration,
+            genres = if (targetMedia.genres.isNotEmpty()) targetMedia.genres.joinToString(", ") else null,
+            averageScore = targetMedia.averageScore,
             watchedEpisodes = 0,
-            totalEpisodes = media.episodes,
+            totalEpisodes = targetMedia.episodes,
             nextEpisodeNumber = nextEp?.episode,
             nextEpisodeAiringAt = nextEp?.airingAt,
             airingDayOfWeek = dayOfWeek,
-            status = media.status,
-            siteUrl = media.siteUrl,
+            status = targetMedia.status,
+            siteUrl = targetMedia.siteUrl,
             notificationsEnabled = true,
             alertLeadTimeMinutes = 0,
-            mediaType = media.mediaType
+            mediaType = targetMedia.mediaType
         )
 
-        dao.insertOrUpdate(entity)
-        alarmScheduler.scheduleEpisodeAlarm(entity)
+        saveEntity(entity)
+    }
+
+    suspend fun saveEntity(entity: AnimeEntity) {
+        val finalEntity = if (entity.id < 0 && entity.nextEpisodeAiringAt == null) {
+            val showMedia = tvMazeApiService.getShowById(-entity.id)
+            if (showMedia?.nextAiringEpisode != null) {
+                val nextEp = showMedia.nextAiringEpisode
+                val dayOfWeek = calculateDayOfWeek(nextEp.airingAt)
+                entity.copy(
+                    nextEpisodeNumber = nextEp.episode,
+                    nextEpisodeAiringAt = nextEp.airingAt,
+                    airingDayOfWeek = dayOfWeek
+                )
+            } else {
+                entity
+            }
+        } else {
+            entity
+        }
+
+        dao.insertOrUpdate(finalEntity)
+        alarmScheduler.scheduleEpisodeAlarm(finalEntity)
     }
 
     suspend fun removeAnime(id: Int) {

@@ -13,6 +13,7 @@ import com.animenotifier.data.repository.AnimeRepository
 import com.animenotifier.data.repository.MediaCategory
 import com.animenotifier.ui.screens.AnimeDetailModel
 import com.animenotifier.ui.screens.toDetailModel
+import com.animenotifier.ui.screens.toEntity
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -92,8 +93,13 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onSearchQueryChanged(query: String) {
         _searchQuery.value = query
-        _activeChip.value = DiscoveryChip.SEARCH
-        executeSearch(query, _selectedGenre.value, _selectedCategory.value)
+        if (query.isBlank() && _selectedGenre.value == null) {
+            _activeChip.value = DiscoveryChip.TRENDING
+            loadDiscoveryData(DiscoveryChip.TRENDING, _selectedCategory.value)
+        } else {
+            _activeChip.value = DiscoveryChip.SEARCH
+            executeSearch(query, _selectedGenre.value, _selectedCategory.value)
+        }
     }
 
     fun onCategorySelected(category: MediaCategory) {
@@ -106,9 +112,15 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun onGenreSelected(genre: String?) {
-        _selectedGenre.value = if (_selectedGenre.value == genre) null else genre
-        _activeChip.value = DiscoveryChip.SEARCH
-        executeSearch(_searchQuery.value, _selectedGenre.value, _selectedCategory.value)
+        val newGenre = if (_selectedGenre.value == genre) null else genre
+        _selectedGenre.value = newGenre
+        if (newGenre == null && _searchQuery.value.isBlank()) {
+            _activeChip.value = DiscoveryChip.TRENDING
+            loadDiscoveryData(DiscoveryChip.TRENDING, _selectedCategory.value)
+        } else {
+            _activeChip.value = DiscoveryChip.SEARCH
+            executeSearch(_searchQuery.value, newGenre, _selectedCategory.value)
+        }
     }
 
 
@@ -171,6 +183,17 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
                 repository.removeAnime(media.id)
             } else {
                 repository.saveAnime(media)
+            }
+        }
+    }
+
+    fun toggleSaveDetail(detail: AnimeDetailModel) {
+        viewModelScope.launch {
+            val isAlreadySaved = savedAnimeList.value.any { it.id == detail.id }
+            if (isAlreadySaved) {
+                repository.removeAnime(detail.id)
+            } else {
+                repository.saveEntity(detail.toEntity())
             }
         }
     }

@@ -113,7 +113,7 @@ fun ScheduleScreen(viewModel: AnimeViewModel) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No saved anime airing on ${daysOfWeek.find { it.first == selectedDay }?.second}.",
+                        text = "No shows in your watchlist airing on ${daysOfWeek.find { it.first == selectedDay }?.second}.",
                         color = TextSecondary,
                         fontSize = 13.sp
                     )

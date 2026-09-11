@@ -15,6 +15,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,14 +32,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.animenotifier.data.remote.AniListMedia
+import com.animenotifier.data.repository.MediaCategory
 import com.animenotifier.ui.AnimeViewModel
 import com.animenotifier.ui.DiscoveryChip
 import com.animenotifier.ui.theme.*
 
-val AnimeGenres = listOf(
+val AppGenres = listOf(
     "Action",
     "Adventure",
     "Comedy",
+    "Crime",
     "Drama",
     "Fantasy",
     "Horror",
@@ -61,6 +65,7 @@ fun SearchScreen(viewModel: AnimeViewModel) {
     val selectedGenre by viewModel.selectedGenre.collectAsState()
     val watchlist by viewModel.savedAnimeList.collectAsState()
 
+    var showGenreMenu by remember { mutableStateOf(false) }
     val savedIds = remember(watchlist) { watchlist.map { it.id }.toSet() }
 
     Scaffold(
@@ -69,9 +74,9 @@ fun SearchScreen(viewModel: AnimeViewModel) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(SurfaceRoot)
-                    .padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 8.dp)
+                    .padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 10.dp)
             ) {
-                // Clean search bar
+                // 1. Clean Compact Search Input
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { viewModel.onSearchQueryChanged(it) },
@@ -82,7 +87,15 @@ fun SearchScreen(viewModel: AnimeViewModel) {
                         Text(
                             text = "Search anime, TV series, movies...",
                             color = TextSecondary,
-                            fontSize = 14.sp
+                            fontSize = 13.sp
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search",
+                            tint = TextSecondary,
+                            modifier = Modifier.size(18.dp)
                         )
                     },
                     trailingIcon = {
@@ -101,7 +114,7 @@ fun SearchScreen(viewModel: AnimeViewModel) {
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = SurfaceElevated,
                         unfocusedContainerColor = SurfaceElevated,
-                        focusedBorderColor = TextPrimary,
+                        focusedBorderColor = AccentPrimary,
                         unfocusedBorderColor = SurfaceBorder,
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary
@@ -111,32 +124,34 @@ fun SearchScreen(viewModel: AnimeViewModel) {
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Media Category Filter Pills: [ ALL | ANIME | TV SERIES ]
+                // 2. Sleek Segmented Control for Media Category: [ ALL | ANIME | TV SERIES ]
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(34.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(SurfaceElevated)
+                        .border(1.dp, SurfaceBorder, RoundedCornerShape(8.dp))
+                        .padding(2.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    com.animenotifier.data.repository.MediaCategory.values().forEach { category ->
+                    MediaCategory.values().forEach { category ->
                         val isSelected = (selectedCategory == category)
                         Box(
                             modifier = Modifier
                                 .weight(1f)
+                                .fillMaxHeight()
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(if (isSelected) AccentPrimary else SurfaceElevated)
-                                .border(
-                                    1.dp,
-                                    if (isSelected) AccentPrimary else SurfaceBorder,
-                                    RoundedCornerShape(6.dp)
-                                )
-                                .clickable { viewModel.onCategorySelected(category) }
-                                .padding(vertical = 7.dp),
+                                .background(if (isSelected) AccentPrimary else Color.Transparent)
+                                .clickable { viewModel.onCategorySelected(category) },
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = category.label.uppercase(),
                                 fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.1.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                letterSpacing = 1.sp,
                                 color = if (isSelected) TextPrimary else TextSecondary
                             )
                         }
@@ -145,18 +160,103 @@ fun SearchScreen(viewModel: AnimeViewModel) {
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Discovery Category Chips
+                // 3. Single Unified Filter Strip (Genre Menu + Discovery Chips + Quick Genres)
                 LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val chips = listOf(
+                    // Genre Menu Button / Active Genre Filter Pill
+                    item(key = "genre_filter_btn") {
+                        val isGenreActive = selectedGenre != null
+                        Box {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (isGenreActive) AccentPrimary else SurfaceElevated)
+                                    .border(
+                                        1.dp,
+                                        if (isGenreActive) AccentPrimary else SurfaceBorder,
+                                        RoundedCornerShape(6.dp)
+                                    )
+                                    .clickable {
+                                        if (isGenreActive) {
+                                            viewModel.onGenreSelected(null)
+                                        } else {
+                                            showGenreMenu = true
+                                        }
+                                    }
+                                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                ) {
+                                    Text(
+                                        text = if (isGenreActive) "✕ ${selectedGenre!!.uppercase()}" else "GENRES",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 1.sp,
+                                        color = if (isGenreActive) TextPrimary else TextSecondary
+                                    )
+                                    if (!isGenreActive) {
+                                        Icon(
+                                            imageVector = Icons.Default.ArrowDropDown,
+                                            contentDescription = "Select Genre",
+                                            tint = TextSecondary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            }
+
+                            DropdownMenu(
+                                expanded = showGenreMenu,
+                                onDismissRequest = { showGenreMenu = false },
+                                modifier = Modifier
+                                    .background(SurfaceElevated)
+                                    .border(1.dp, SurfaceBorder, RoundedCornerShape(8.dp))
+                            ) {
+                                AppGenres.forEach { genre ->
+                                    val isSelected = (selectedGenre == genre)
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = genre,
+                                                fontSize = 12.sp,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                color = if (isSelected) AccentPrimary else TextPrimary
+                                            )
+                                        },
+                                        onClick = {
+                                            showGenreMenu = false
+                                            viewModel.onGenreSelected(genre)
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Vertical Divider
+                    item(key = "filter_divider") {
+                        Box(
+                            modifier = Modifier
+                                .height(16.dp)
+                                .width(1.dp)
+                                .background(SurfaceBorder)
+                        )
+                    }
+
+                    // Discovery Presets
+                    val discoveryModes = listOf(
                         DiscoveryChip.TRENDING,
                         DiscoveryChip.TOP_AIRING,
                         DiscoveryChip.AIRING_TODAY
                     )
 
-                    items(chips.size) { index ->
-                        val chip = chips[index]
+                    items(discoveryModes) { chip ->
                         val isSelected = (activeChip == chip && selectedGenre == null && searchQuery.isEmpty())
                         Box(
                             modifier = Modifier
@@ -168,42 +268,38 @@ fun SearchScreen(viewModel: AnimeViewModel) {
                                     RoundedCornerShape(6.dp)
                                 )
                                 .clickable { viewModel.onChipSelected(chip) }
-                                .padding(horizontal = 12.dp, vertical = 7.dp)
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = chip.label.uppercase(),
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.1.sp,
+                                letterSpacing = 1.sp,
                                 color = if (isSelected) TextPrimary else TextSecondary
                             )
                         }
                     }
-                }
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Genre Filter Chips Row
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    items(AnimeGenres) { genre ->
+                    // Popular Genres for One-Tap Access
+                    items(AppGenres) { genre ->
                         val isSelected = (selectedGenre == genre)
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(if (isSelected) AccentPrimary.copy(alpha = 0.85f) else SurfaceElevatedHigh)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (isSelected) AccentPrimary else SurfaceElevatedHigh)
                                 .border(
                                     1.dp,
                                     if (isSelected) AccentPrimary else SurfaceBorder,
-                                    RoundedCornerShape(4.dp)
+                                    RoundedCornerShape(6.dp)
                                 )
                                 .clickable { viewModel.onGenreSelected(genre) }
-                                .padding(horizontal = 10.dp, vertical = 5.dp)
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = genre.uppercase(),
-                                fontSize = 9.sp,
+                                fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 1.sp,
                                 color = if (isSelected) TextPrimary else TextSecondary
@@ -235,7 +331,7 @@ fun SearchScreen(viewModel: AnimeViewModel) {
                 ) {
                     Text(
                         text = if (searchQuery.isNotBlank() || selectedGenre != null) {
-                            "No anime found matching criteria."
+                            "No titles found matching criteria."
                         } else {
                             "Explore popular releases or filter by genre above."
                         },
