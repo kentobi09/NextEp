@@ -1,6 +1,7 @@
 package com.animenotifier
 
 import android.os.Bundle
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -39,6 +40,7 @@ class MainActivity : ComponentActivity() {
     private val viewModel: AnimeViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         setContent {
             AnimeNotifierTheme {
