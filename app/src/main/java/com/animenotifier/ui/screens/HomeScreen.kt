@@ -540,7 +540,7 @@ fun EmptyWatchlistState(onNavigateToSearch: () -> Unit) {
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Track your favorite anime releases with exact alerts.",
+            text = "Track your favorite anime, series, and movie releases with exact alerts.",
             fontSize = 13.sp,
             color = TextSecondary
         )
@@ -553,7 +553,7 @@ fun EmptyWatchlistState(onNavigateToSearch: () -> Unit) {
             colors = ButtonDefaults.buttonColors(containerColor = AccentPrimary)
         ) {
             Text(
-                text = "EXPLORE ANIME",
+                text = "EXPLORE TITLES",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.2.sp
