@@ -96,6 +96,4 @@ cd NextEp
 
 ---
 
-## License
 
-MIT License. Free and open source for personal entertainment and non-commercial use.
