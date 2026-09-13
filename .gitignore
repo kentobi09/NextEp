@@ -16,3 +16,4 @@ app/build
 local.properties
 *.ps1
 *.apk
+!NextEp.apk
